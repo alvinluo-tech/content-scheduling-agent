@@ -95,5 +95,6 @@
   "agent_summary": "离线 Mock 执行结束：共 5 次工具调用，其中草稿保存 1 次。本结果只验证流程正确性，不代表真实模型的决策质量。",
   "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
   "trace_file": "examples/02-conflict.trace.json",
+  "input_file": "examples/02-conflict.input.json",
   "report_md": "examples/02-conflict.report.md"
 }

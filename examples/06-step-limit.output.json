@@ -111,5 +111,6 @@
   "agent_summary": null,
   "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
   "trace_file": "examples/06-step-limit.trace.json",
+  "input_file": "examples/06-step-limit.input.json",
   "report_md": "examples/06-step-limit.report.md"
 }

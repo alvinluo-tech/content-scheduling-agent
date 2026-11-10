@@ -41,6 +41,17 @@
 - 草稿 `D-M02-2026-11-12-1300`：draft_pending_confirmation（待用户点头），2026-11-12 13:30，提交 1 次
 - 已发布：否（工具集里没有发布能力）
 
+## 怎么拍板（需要人做的动作）
+
+待拍板：`C-M02-2026-11-12-1330`（M02，建议 2026-11-12 13:30）
+
+- 同意：`python -m src.main --input examples/10-contention.input.json --approve C-M02-2026-11-12-1330`
+- 否决：`python -m src.main --input examples/10-contention.input.json --reject C-M02-2026-11-12-1330`
+- 改选其它时段：`python -m src.main --input examples/10-contention.input.json --replan C-M02-2026-11-12-1330=19:30`
+- 界面等价动作：`POST /api/confirm`、`POST /api/reject`（带 `time` 即改选时段）。
+
+这些动作只往账本写一条决定；下一个请求仍走同一张图，模型不会因为「人同意过」就自动获得改硬性时间的权限。
+
 ## 模型自述（不是证据，结论以上面的报告字段为准）
 
 离线 Mock 执行结束：共 9 次工具调用，其中草稿保存 2 次。本结果只验证流程正确性，不代表真实模型的决策质量。

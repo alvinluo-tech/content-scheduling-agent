@@ -99,7 +99,8 @@ CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的
 
 ![时段冲突场景](docs/images/web-02-conflict.png)
 
-报告还能导出：界面上的「导出 Markdown 报告」按钮（`GET /api/report.md`，服务端只保留最近一次运行，不落盘），
+报告还能导出：界面上的「导出 Markdown 报告」按钮（`GET /api/report.md`，服务端只保留最近一次运行，不落盘；
+有确认项时报告末尾会列出可直接复制的 `--approve` / `--reject` / `--replan` 命令，人不用自己拼 id），
 CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染，内容就是那份 `report` + 决策记录。
 
 截图：`docs/images/web-02-conflict.png`（冲突→待确认）、`web-03-rules.png`（信息缺失 + 规则风险）、
@@ -135,7 +136,7 @@ src/        store / policy / tools / models / graph / trace / report / markdown 
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   10 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      87 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子）
+tests/      91 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告与拍板命令、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```

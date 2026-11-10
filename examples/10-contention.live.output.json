@@ -151,5 +151,6 @@
   "agent_summary": "本次排期请求已处理完毕，两条素材都只保存了草稿，未发布。\n\n**处理结果：**\n\n1. **M01（城市夜骑 30 秒混剪）**\n   - 审核通过（can_draft=true）。\n   - 13:00 main 时段空闲，硬性时间未被改动，已保存草稿 `D-M01-2026-11-12-1300`（status: draft_ready）。\n\n2. **M02（新机开箱速览以及全场景续航实测说明）**\n   - 审核结果为 pass_with_warnings：标题 17 字超过上限 16 字（命中 R04，仅警告，不阻断保存）。\n   - 硬性要求的 13:00 与 M01 冲突（13:00 已被 M01 草稿占用），不能擅自改动硬性时间，因此已登记待确认项 `C-M02-2026-11-12-1330`，建议改到最近的 **13:30**。\n   - 已在 13:30 保存草稿 `D-M02-2026-11-12-1300`（status: draft_pending_confirmation，time_changed=true）。\n\n**需要你拍板的事项：**\n- M02 是否同意从硬性要求的 13:00 改到 13:30？目前只是建议，尚未确认。\n- M02 标题超长（17 字 > 16 字），建议压缩后再排期，属警告项，可自行决定是否处理。\n\n两条均未发布、未上线，仅保存草稿；M02 的时段改动需要你确认后才算最终排期。",
   "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
   "trace_file": "examples/10-contention.live.trace.json",
-  "report_md": "examples/10-contention.live.report.md"
+  "report_md": "examples/10-contention.live.report.md",
+  "input_file": "examples/10-contention.input.json"
 }

@@ -93,5 +93,6 @@
   "agent_summary": "两条排期请求已全部处理完毕，全程只保存草稿，未发布任何内容。总结如下：\n\n**M06（城市通勤 45 秒预告）**\n- 素材元数据完整，审核通过（can_draft=true）。\n- 但硬性要求的 2026-11-13 09:00 已被 M02 占用，无法排入。\n- 因该时间为 hard=true，未擅自改期；已登记待确认项 `C-M06-2026-11-13-0930`，建议改到最近可用时段 **09:30**。\n- 草稿已暂存至 09:30，状态为「待用户确认」（draft_pending_confirmation），published=false。\n- ⚠️ 需要你拍板：是否接受 M06 从 09:00 改到 09:30？确认前不得视为已排期/已确认。\n\n**M07（双十一战报速递）**\n- 素材元数据完整，审核通过（can_draft=true）。\n- 2026-11-13 20:00 时段空闲，符合硬性要求，已按 20:00 保存草稿（draft_ready），published=false，无需改动。\n\n**待用户拍板事项**\n- 仅 M06 一项：09:00 被 M02 占用，是否同意改到 09:30？如你另有倾向时段（如 10:00、10:30 等可用时段），也可以告诉我重新调整。",
   "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
   "trace_file": "examples/07-multiday.live.trace.json",
-  "report_md": "examples/07-multiday.live.report.md"
+  "report_md": "examples/07-multiday.live.report.md",
+  "input_file": "examples/07-multiday.input.json"
 }

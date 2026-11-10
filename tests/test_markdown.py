@@ -28,6 +28,26 @@ class MarkdownReportTest(unittest.TestCase):
         self.assertNotIn("已发布：是", text)
         self.assertIn("published 恒为 false", text)
 
+    def test_pending_items_come_with_commands_a_human_can_paste(self) -> None:
+        text = render_report(load("02-conflict", "output"), load("02-conflict", "trace"))
+        self.assertIn("## 怎么拍板", text)
+        self.assertIn("--approve C-M01-2026-11-12-1900", text)
+        self.assertIn("--reject C-M01-2026-11-12-1900", text)
+        self.assertIn("--replan C-M01-2026-11-12-1900=19:30", text)
+        self.assertIn("examples/02-conflict.input.json", text)
+
+    def test_a_clean_run_has_nothing_to_ask_the_human(self) -> None:
+        text = render_report(load("01-normal", "output"), load("01-normal", "trace"))
+        self.assertNotIn("怎么拍板", text)
+
+    def test_a_custom_run_without_an_input_file_points_at_the_buttons(self) -> None:
+        report = load("02-conflict", "output")
+        report.pop("input_file", None)
+        text = render_report(report, load("02-conflict", "trace"))
+        self.assertIn("没有输入文件", text)
+        self.assertIn("POST /api/confirm", text)
+        self.assertNotIn("--approve", text)
+
     def test_human_decision_shows_who_when_and_which_version(self) -> None:
         report = load("02-conflict", "output")
         item = report["materials"][0]["pending_confirmations"][0]

@@ -130,6 +130,7 @@ def run_once(args: argparse.Namespace) -> dict[str, Any]:
     if args.trace:
         atomic_write_json(Path(args.trace), trace_dict)
         report["trace_file"] = str(args.trace)
+    report["input_file"] = Path(args.input).as_posix()
     if getattr(args, "report_md", None):
         md_path = Path(args.report_md)
         md_path.parent.mkdir(parents=True, exist_ok=True)

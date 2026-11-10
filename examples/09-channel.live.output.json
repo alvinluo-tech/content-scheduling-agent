@@ -148,5 +148,6 @@
   "agent_summary": "处理完成，以下是本次排期的结果与需要你拍板的事项：\n\n**M02（新机开箱速览以及全场景续航实测说明）**\n- 素材信息齐全，审核结果：pass_with_warnings（可保存草稿）。\n- 触发一条警示：R04 标题长度上限——当前标题 17 字，超过上限 16 字，建议压缩后再排期（不影响本次草稿，但值得处理）。\n- 你硬性要求 12:00 在 shorts 发布（hard=true），但查询发现该时段已被 **M00** 占用，因此我不能擅自改期，已按流程登记待确认项 **C-M02-2026-11-12-1230-shorts**，并据此暂存草稿到建议时段 **12:30**（草稿状态：draft_pending_confirmation，未发布、未确认）。\n\n**M06（城市通勤 45 秒预告）**\n- 素材信息齐全，审核结果：pass（通过）。\n- 13:00 在 shorts 频道查询可用、无冲突，已按请求保存草稿：**13:00**（草稿状态：draft_ready，未发布）。\n\n**需要你拍板的两件事**\n1. M02 的硬性时段 12:00 已被 M00 占用，是否同意改到 12:30？在你确认前，这条只能作为建议，不能视为已排期/已确认。\n2. M02 标题超长（17 字 vs 上限 16 字），是否需要压缩标题后再排期？\n\n以上均为草稿保存，未发生任何发布动作。",
   "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
   "trace_file": "examples/09-channel.live.trace.json",
-  "report_md": "examples/09-channel.live.report.md"
+  "report_md": "examples/09-channel.live.report.md",
+  "input_file": "examples/09-channel.input.json"
 }

@@ -41,5 +41,6 @@
   "published": false,
   "agent_summary": "本次排期请求处理结果如下：\n\n**M05（秋日露营 vlog 预告）**\n- 素材信息齐全：50 秒 mp4，封面 m05.jpg，已授权，品类「生活」，归属内容组。\n- 审核规则检查：**pass**，无违规、无缺失字段，`can_draft=true`，允许保存草稿。\n- 时段查询：**15:00 当前空闲**（无冲突），且用户要求 15:00 发布（hard=false 可协商），因此无需变更时段，直接按 15:00 拟排期。\n- 保存草稿：**失败**。两次调用 `save_draft` 均返回 `SAVE_FAILED`（草稿保存服务返回失败，存储不可用，recoverable=true）。已按提示重试一次，仍未成功。\n\n**需要说明 / 待用户拍板：**\n1. M05 的草稿目前**尚未保存成功**，原因是草稿保存服务存储不可用，并非素材或时段问题。我不具备发布能力，也没有声称已保存或已排期。\n2. M05 的 15:00 时段本身是空闲且可用的，本次没有需要协商改期的事项；待存储服务恢复后，可重新对 M05 按 15:00 执行 `save_draft`。\n3. 是否需要我在服务恢复后重试保存，或改用 15:30 / 16:00 / 16:30 等替代时段，请告知。",
   "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
-  "trace_file": "examples/04-save-failure.live.trace.json"
+  "trace_file": "examples/04-save-failure.live.trace.json",
+  "input_file": "examples/04-save-failure.input.json"
 }

@@ -101,8 +101,11 @@ REPORT_LOCK = threading.Lock()
 LAST_REPORT: dict[str, Any] = {}
 
 
-def remember_report(report: dict[str, Any], trace: dict[str, Any]) -> None:
+def remember_report(report: dict[str, Any], trace: dict[str, Any], case: str = "") -> None:
     """记住最近一次运行，供 GET /api/report.md 导出；只存在内存里，不落盘。"""
+    preset = [item["file"] for item in CASE_META if item["file"] == case]
+    if preset:  # 预置场景的输入文件是归档的那一份；自定义请求没有文件，报告里就不写命令
+        report["input_file"] = "examples/" + preset[0] + ".input.json"
     with REPORT_LOCK:
         LAST_REPORT.clear()
         LAST_REPORT.update({"report": report, "trace": trace})
@@ -241,7 +244,7 @@ def run_case(body: dict[str, Any]) -> dict[str, Any]:
         offline=bool(body.get("offline", True)),
         run_id=case,
     )
-    remember_report(report, trace)
+    remember_report(report, trace, case)
     return {"status": "ok", "case": case, "report": report, "trace": trace, "state": snapshot()}
 
 
@@ -342,7 +345,7 @@ class Handler(BaseHTTPRequestHandler):
                             run_id=case,
                             on_trace_event=events.put,
                         )
-                        remember_report(report, trace)
+                        remember_report(report, trace, case)
                         events.put({"type": "report", "case": case, "report": report, "trace": trace, "state": snapshot()})
                     except Exception as exc:
                         traceback.print_exc()

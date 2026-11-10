@@ -21,10 +21,13 @@ test_step_limit_returns_incomplete_status (tests.test_agent_flow.AgentFlowTest.t
 test_trace_schema (tests.test_agent_flow.AgentFlowTest.test_trace_schema) ... ok
 test_two_requests_for_the_same_slot_never_double_book (tests.test_agent_flow.AgentFlowTest.test_two_requests_for_the_same_slot_never_double_book)
 两条硬性请求抢 13:00：先到的占住时段，后到的必须自己发现并登记待确认。 ... ok
+test_a_clean_run_has_nothing_to_ask_the_human (tests.test_markdown.MarkdownReportTest.test_a_clean_run_has_nothing_to_ask_the_human) ... ok
+test_a_custom_run_without_an_input_file_points_at_the_buttons (tests.test_markdown.MarkdownReportTest.test_a_custom_run_without_an_input_file_points_at_the_buttons) ... ok
 test_cli_writes_markdown_file (tests.test_markdown.MarkdownReportTest.test_cli_writes_markdown_file) ... ok
 test_conflict_report_keeps_confirmation_and_never_claims_publish (tests.test_markdown.MarkdownReportTest.test_conflict_report_keeps_confirmation_and_never_claims_publish) ... ok
 test_decision_table_lists_every_tool_call (tests.test_markdown.MarkdownReportTest.test_decision_table_lists_every_tool_call) ... ok
 test_human_decision_shows_who_when_and_which_version (tests.test_markdown.MarkdownReportTest.test_human_decision_shows_who_when_and_which_version) ... ok
+test_pending_items_come_with_commands_a_human_can_paste (tests.test_markdown.MarkdownReportTest.test_pending_items_come_with_commands_a_human_can_paste) ... ok
 test_save_failure_is_reported_as_not_saved (tests.test_markdown.MarkdownReportTest.test_save_failure_is_reported_as_not_saved) ... ok
 test_step_limit_report_lists_unfinished_materials (tests.test_markdown.MarkdownReportTest.test_step_limit_report_lists_unfinished_materials) ... ok
 test_banned_term_is_risk (tests.test_policy.PolicyTest.test_banned_term_is_risk) ... ok
@@ -39,6 +42,7 @@ test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
 test_custom_request_is_validated_like_the_cli (tests.test_server.ServerTestCase.test_custom_request_is_validated_like_the_cli) ... ok
 test_custom_request_runs_through_the_same_pipeline (tests.test_server.ServerTestCase.test_custom_request_runs_through_the_same_pipeline) ... ok
+test_exported_markdown_tells_the_human_how_to_decide (tests.test_server.ServerTestCase.test_exported_markdown_tells_the_human_how_to_decide) ... ok
 test_human_approval_turns_pending_draft_into_ready (tests.test_server.ServerTestCase.test_human_approval_turns_pending_draft_into_ready) ... ok
 test_human_can_replan_to_another_slot_instead_of_accepting (tests.test_server.ServerTestCase.test_human_can_replan_to_another_slot_instead_of_accepting) ... ok
 test_human_rejection_voids_the_draft_and_stops_the_same_plan (tests.test_server.ServerTestCase.test_human_rejection_voids_the_draft_and_stops_the_same_plan) ... ok
@@ -94,6 +98,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 87 tests in 8.649s
+Ran 91 tests in 7.703s
 
 OK

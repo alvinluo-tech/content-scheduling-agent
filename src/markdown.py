@@ -137,6 +137,38 @@ def _trace_table(trace: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _decision_section(pending: list[tuple[Any, dict[str, Any]]], input_file: Any) -> list[str]:
+    """把"人要做的事"写成可直接复制的命令；命令只写账本，不碰排期。"""
+    material_id, item = pending[0]
+    cid = str(item.get("confirmation_id"))
+    when = " ".join(str(part) for part in (item.get("proposed_date"), item.get("proposed_time")) if part)
+    lines = [
+        "## 怎么拍板（需要人做的动作）",
+        "",
+        "待拍板：" + _code(cid) + "（" + str(material_id) + "，建议 " + (when or "未给出时段") + "）",
+        "",
+    ]
+    if input_file:
+        base = "python -m src.main --input " + str(input_file)
+        lines += [
+            "- 同意：" + _code(base + " --approve " + cid),
+            "- 否决：" + _code(base + " --reject " + cid),
+            "- 改选其它时段：" + _code(base + " --replan " + cid + "=19:30"),
+        ]
+    else:
+        lines += [
+            "- 这次运行来自界面上的自定义请求，没有输入文件：用页面上的「记为用户已确认 / 不同意这个改期 / 改到所选时段」按钮。",
+        ]
+    lines += [
+        "- 界面等价动作：" + _code("POST /api/confirm") + "、" + _code("POST /api/reject")
+        + "（带 " + _code("time") + " 即改选时段）。",
+        "",
+        "这些动作只往账本写一条决定；下一个请求仍走同一张图，模型不会因为「人同意过」就自动获得改硬性时间的权限。",
+        "",
+    ]
+    return lines
+
+
 def render_report(report: dict[str, Any], trace: dict[str, Any] | None = None) -> str:
     """把同一份 report 渲染成人读的 Markdown；所有数字都来自报告，不额外推断。"""
     limits = report.get("limits") or {}
@@ -176,6 +208,14 @@ def render_report(report: dict[str, Any], trace: dict[str, Any] | None = None) -
         lines += _material_section(row, index)
     if report.get("unfinished_materials"):
         lines += ["⚠️ 未完成素材：" + "、".join(report["unfinished_materials"]), ""]
+    pending = [
+        (row.get("material_id"), item)
+        for row in report.get("materials") or []
+        for item in row.get("pending_confirmations") or []
+        if str(item.get("status")) == "pending"
+    ]
+    if pending:
+        lines += _decision_section(pending, report.get("input_file"))
     summary_text = str(report.get("agent_summary") or "").strip()
     if summary_text:
         lines += ["## 模型自述（不是证据，结论以上面的报告字段为准）", "", summary_text, ""]

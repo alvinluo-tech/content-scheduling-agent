@@ -272,6 +272,16 @@ class ServerTestCase(unittest.TestCase):
         self.assertIn(confirmation_id, after["rejected_confirmations"])
         self.assertFalse(report["published"])
 
+    def test_exported_markdown_tells_the_human_how_to_decide(self) -> None:
+        status, _ = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
+        self.assertEqual(status, 200)
+        status, raw = self.get("/api/report.md")
+        self.assertEqual(status, 200)
+        text = raw.decode("utf-8")
+        self.assertIn("## 怎么拍板", text)
+        self.assertIn("--approve C-M01-2026-11-12-1900", text)
+        self.assertIn("examples/02-conflict.input.json", text)
+
     def test_markdown_export_needs_a_run_then_serves_the_last_one(self) -> None:
         with server.REPORT_LOCK:
             server.LAST_REPORT.clear()
