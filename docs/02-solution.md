@@ -63,6 +63,16 @@
 `agent` 节点入口先判 `steps >= max_steps`，达到上限直接返回 `terminal=step_limit_reached` 且**不再调用模型**。
 上限优先级：`--max-steps` > 输入 `options.max_steps` > 环境变量 `MAX_STEPS` > 20。
 
+## 账本为什么需要跨进程锁
+原子替换（`mkstemp` + `os.replace`）只保证文件不会写坏，挡不住丢更新：Web 演示层与 CLI 各持一份内存快照，
+谁先读谁后写，后写的那次会整份覆盖前一次。所以 `Store` 把写入收进 `transaction()`：先对 `<ledger>.json.lock`
+拿跨进程锁（Windows `msvcrt.locking` / POSIX `flock`），再重读磁盘，再改，再原子替换。三个性质：
+- **可重入**：`replan_confirmation` 会先否决再登记新方案，只在最外层进出一次锁。
+- **检查与写入同锁**：`save_draft` 把"查冲突 + 写账本"整段包进同一把锁，否则两个并发运行会都看到空位、各写一份。
+- **等不到就报错**：锁等满 10 秒抛 `LedgerBusy`，工具层转成 `LEDGER_BUSY`（可恢复），不假装写成功。
+
+边界：这是单文件互斥，不是数据库事务——没有多副本、没有行级并发、锁粒度是整个账本。
+
 ## 离线 Mock 的边界
 `ScriptedChatModel` 用确定性状态机模拟"看工具结果决定下一步"，只用于验证流程、护栏与报告正确性。
 它**不证明**真实模型的决策质量——真实模型的 trace 见 `examples/*.live.*`（见 03 文档）。

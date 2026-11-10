@@ -15,6 +15,7 @@
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具、替代时段的推荐理由随工具结果返回 |
 | 图级 | `tests/test_agent_flow.py` | 9 个用例端到端、多日冲突只在自己那一天待确认、频道冲突只在自己那一个频道待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件 |
+| 账本层 | `tests/test_store.py` | 两个实例各自写不互相覆盖（旧实现会从 2 份掉到 1 份）、别处写的确认项不被后来的草稿覆盖、锁被占用时等满超时报 `LedgerBusy` 且释放后照常可用 |
 | 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
 
 ## 九个用例的实际结果（离线 Mock）
@@ -95,6 +96,9 @@
 6. **步数上限是硬截断**：达到上限的素材保持 `unresolved`/`not_processed`，不做部分保存的补偿逻辑。
 7. **顺延只到"后面配置过的日期"**：`next_available` 不会凭空造日期，也不考虑跨日的节假日/流量策略；
    真实排期要接业务日历，这一层现在由 `schedule.json` 的 `days` 近似。
+8. **账本并发只做到单文件互斥**：`Store.transaction()` 用 `<ledger>.json.lock` 把"读-改-写"整体互斥，
+   实测两个并发 CLI 运行不会丢草稿、也不会把同一时段排进两条素材；但它不是数据库事务——没有多副本、
+   没有行级并发，锁粒度是整个账本，写入频繁时会让后到者排队甚至等到 `LEDGER_BUSY`。
 
 ## 真实模型（DeepSeek）验证
 

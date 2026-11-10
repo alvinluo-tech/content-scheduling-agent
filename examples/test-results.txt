@@ -50,6 +50,9 @@ test_stream_rejects_unknown_case_before_opening_stream (tests.test_server.Server
 test_unknown_api_is_404 (tests.test_server.ServerTestCase.test_unknown_api_is_404) ... ok
 test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_case_is_rejected) ... ok
 test_unknown_confirmation_is_rejected (tests.test_server.ServerTestCase.test_unknown_confirmation_is_rejected) ... ok
+test_a_confirmation_written_elsewhere_is_not_lost_by_a_later_draft (tests.test_store.LedgerConcurrencyTest.test_a_confirmation_written_elsewhere_is_not_lost_by_a_later_draft) ... ok
+test_two_instances_do_not_overwrite_each_others_drafts (tests.test_store.LedgerConcurrencyTest.test_two_instances_do_not_overwrite_each_others_drafts) ... ok
+test_waiting_on_a_held_lock_gives_up_loudly_instead_of_writing (tests.test_store.LedgerConcurrencyTest.test_waiting_on_a_held_lock_gives_up_loudly_instead_of_writing) ... ok
 test_same_material_in_two_channels_creates_two_drafts (tests.test_tools.ChannelToolboxTest.test_same_material_in_two_channels_creates_two_drafts) ... ok
 test_slot_lookup_is_scoped_to_the_requested_channel (tests.test_tools.ChannelToolboxTest.test_slot_lookup_is_scoped_to_the_requested_channel) ... ok
 test_unknown_channel_is_refused_without_guessing (tests.test_tools.ChannelToolboxTest.test_unknown_channel_is_refused_without_guessing) ... ok
@@ -76,6 +79,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 71 tests in 7.001s
+Ran 74 tests in 7.349s
 
 OK
