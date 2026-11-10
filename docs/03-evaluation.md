@@ -4,7 +4,7 @@
 
 ```
 .venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 40 passed
-.venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 6 个用例
+.venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 9 个用例
 ```
 
 原始输出见 `examples/test-results.txt`。测试分三层：
@@ -67,9 +67,9 @@
 | `docs/images/web-04-save-failure.png` | 保存失败 | 结论「存在失败项」；M05「保存失败」、草稿「未保存（失败 2 次）」；trace 末两步 `FAIL` |
 | `docs/images/web-06-step-limit.png` | 步数上限 | 结论「步数上限中断」；`步数 3/3`；M02「未完成」、M05「未处理」，模型自述写明未收尾 |
 | `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
-| `docs/images/web-02-conflict-approved.png` | 人工确认后重跑 | 点「记为用户已确认」后确认项变 `approved`、结论变「已排期 · 仅草稿」、`requires_user_confirmation=false`、`published` 仍为 false |
+| `docs/images/web-02-conflict-approved.png` | 人工确认后重跑 | 点「记为用户已确认」后确认项变「已同意」并带「由 human 于 … 决定」、结论变「已排期 · 仅草稿」、`requires_user_confirmation=false`、`published` 仍为 false |
 | `docs/images/web-02-conflict-replan.png` | 人改选前 | 待确认项下面除了「同意 / 不同意」，还列出工具给过的候选（19:30、20:30）和「改到所选时段」；草稿仍是 `draft_pending_confirmation` |
-| `docs/images/web-02-conflict-replanned.png` | 人改选 20:30 后重跑 | 原方案 `rejected`、新记录 `approved`（`replanned_from` 指回原方案）；模型先撞 `CONFIRMATION_REJECTED`，再改存 20:30 落 `draft_ready`；结论「已排期 · 仅草稿」、`published=false` |
+| `docs/images/web-02-conflict-replanned.png` | 人改选 20:30 后重跑 | 原方案「已否决」、新记录「已同意」并带「改选自 C-M01-2026-11-12-1900」与决定时间（`replanned_from` 指回原方案）；模型先撞 `CONFIRMATION_REJECTED`，再改存 20:30 落 `draft_ready`；结论「已排期 · 仅草稿」、`published=false` |
 | `docs/images/web-02-conflict-rejected.png` | 人工否决后重跑 | 点「不同意这个改期」后：结论「存在失败项」、素材状态「改期被否决」；确认项 `rejected`、草稿「已否决 · 草稿作废」；第 5 步观察是 `CONFIRMATION_REJECTED`（FAIL），`published` 仍为 false |
 | `docs/images/web-02-conflict-streaming.png` | 真实模型运行中（第 3 条决策） | 右栏逐条推送（`执行中 · 已产生 3 条决策记录`，朱红呼吸点），中间上一轮结论压暗；跑完后恢复亮度并换成新结果 |
 | `docs/images/web-narrow.png` | 884px 窄屏（单列） | 三栏在 ≤1000px 折成一列，场景列表、执行区、结论依次堆叠；顶栏出现「耗时 43 毫秒」，说明计时来自本轮真实运行而不是写死 |

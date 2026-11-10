@@ -59,6 +59,13 @@
   是否真的排上要看 `outcome`（scheduled / pending_confirmation / partial / failed / incomplete）。
   这样"保存失败"既不会被说成成功，也不会被误读成流程崩了。
 
+## 人的拍板要能只读回放
+
+确认项不是布尔开关，而是一条记录：`status`（pending / approved / rejected）、`decided_by`、`decided_at`，
+改选时还有 `replanned_from` 指回被否决的那一版。报告的 `pending_confirmations` 把这些字段一并带出来，
+所以「谁在什么时候批准了哪一版」不用去翻账本、更不用问模型——Markdown 报告与界面的「确认项」读的是同一份数据。
+字段名沿用 `pending_confirmations` 是历史包袱（它装的其实是该请求的全部确认项），改名的收益不如保持旧产物可读。
+
 ## 步数上限
 `agent` 节点入口先判 `steps >= max_steps`，达到上限直接返回 `terminal=step_limit_reached` 且**不再调用模型**。
 上限优先级：`--max-steps` > 输入 `options.max_steps` > 环境变量 `MAX_STEPS` > 20。
