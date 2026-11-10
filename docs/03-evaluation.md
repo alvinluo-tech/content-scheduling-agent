@@ -99,6 +99,9 @@
 .venv/Scripts/python.exe -m src.main --input examples/04-save-failure.input.json --out examples/04-save-failure.live.output.json --trace examples/04-save-failure.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/07-multiday.input.json --out examples/07-multiday.live.output.json --trace examples/07-multiday.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/08-day-overflow.input.json --out examples/08-day-overflow.live.output.json --trace examples/08-day-overflow.live.trace.json --report-md examples/08-day-overflow.live.report.md
+# 先跑一次留下待确认项，再否决它并用真实模型重跑：模型不会绕过否决
+.venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline --ledger .runtime/rejected.json
+.venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --ledger .runtime/rejected.json --reject C-M01-2026-11-12-1900 --out examples/02-conflict-rejected.live.output.json --trace examples/02-conflict-rejected.live.trace.json --report-md examples/02-conflict-rejected.live.report.md
 ```
 
 | 用例 | 真实模型的实际动作（按 trace 顺序） | 结果 | 与离线 Mock 的差异 |
@@ -108,13 +111,16 @@
 | 07-multiday | 并行读两条素材 → 分别 `query_time_slot`(11-13 09:00 / 20:00) → 对 09:00 的冲突 `request_confirmation`(C-M06-2026-11-13-0930) → 两条 `save_draft`(09:30 待确认 / 20:00 直接存) | completed / pending_confirmation，9 次工具调用 / 8 轮；M06 `scheduled_date=2026-11-13`、09:30、`draft_pending_confirmation`；M07 20:00 `draft_ready`；`published=false` | Mock 10 轮；真实模型同样按天归因、只对冲突那条请求确认，另一条不打扰用户 |
 | 08-day-overflow | `read_material` → `check_rules` → `query_time_slot`(11-14 18:00) 看到整日 24 格已满、收 `next_available=2026-11-15 09:30` → `request_confirmation`(C-M01-2026-11-15-0930) → `save_draft`(11-15 09:30) | completed / pending_confirmation，5 次工具调用 / 5 轮；`date_changed=true`、`draft_pending_confirmation`、`published=false`；总结里写「没有擅自抢 M05 的时段，也没有直接改期」 | 与 Mock 的 5 次调用 / 6 轮几乎同构；真实模型额外把「或由人工协调释放 18:00」作为第二个选项交回用户 |
 
-这次真实运行验证到的三件事：
+| 02-conflict（先被否决） | 并行 `read_material` + `check_rules` → `query_time_slot`(18:00) 看到替代 `[19:00, 19:30, 20:30]` → `request_confirmation`(19:00) 收到「已登记（rejected）」→ 直接收尾 | completed / failed，4 次工具调用 / 3 轮；`result_status=confirmation_rejected`、`rejected_confirmations=[C-M01-2026-11-12-1900]`、草稿 `draft_rejected`、`published=false` | 真实模型看到否决后**没有**再存 19:00，也没有偷偷换成 19:30 直接落库，而是把 19:00/19:30/20:30 三选一交回用户；Mock 在同一步直接收尾 |
+
+这次真实运行验证到的四件事：
 
 1. **「先确认、再改硬性时间」不是提示词祈使句**：模型确实先调 `request_confirmation` 再 `save_draft`，且 `save_draft` 的硬性时间护栏没有触发 `HARD_CONSTRAINT_VIOLATION`——护栏与模型行为互为验证。
 2. **没有谎报**：`agent_summary` 明确写「M05 的排期草稿目前未保存成功」「未发布」，与 `published=false`、`draft=null` 一致。
-3. **并行工具调用会改写「步」的口径**：模型在同一轮里并行发出无依赖的调用，于是 `limits.steps_used`（模型轮次）小于 trace 条目数。trace 的 `step` 现在按模型轮次编号（同轮共享步号），报告与 trace 口径一致。
+3. **否决不是提示词约束**：把 19:00 的确认项标成 rejected 之后，模型读到的观察就是「已登记（rejected）」，它自己选择不存草稿并把可选时段交回用户——护栏与模型行为再一次互为验证。
+4. **并行工具调用会改写「步」的口径**：模型在同一轮里并行发出无依赖的调用，于是 `limits.steps_used`（模型轮次）小于 trace 条目数。trace 的 `step` 现在按模型轮次编号（同轮共享步号），报告与 trace 口径一致。
 
-4. **多日同样成立**：07 的真实 trace 里，模型对 11-13 的两条请求分别按天查询占位，
+5. **多日同样成立**：07 的真实 trace 里，模型对 11-13 的两条请求分别按天查询占位，
    只对"硬性时间被占"的那条登记确认、另一条直接落草稿——没有把两条请求的时间口径串在一起。
 
 边界：每条路径只跑一次，样本量不足以证明稳定的决策质量；真实模型 trace 不进 CI（依赖外部 API 与配额）。
