@@ -4,7 +4,7 @@
 模型每一步都要基于上一步的工具结果决定下一步动作（ReAct 循环），而不是走固定分支。
 
 - 语言/框架：Python 3.10+ / LangGraph（显式 StateGraph + 工具节点）
-- 模型：DeepSeek 官方 API（OpenAI 兼容），无密钥时可用离线 Mock 跑通全流程
+- 模型：DeepSeek 官方 API（OpenAI 兼容），默认 `deepseek-v4-pro`；无密钥时可用离线 Mock 跑通全流程
 - 交互形态：CLI（JSON 输入 → JSON 结果 + 逐步 trace）
 
 ## 60 秒上手
@@ -37,6 +37,9 @@ cp .env.example .env         # 填入 DEEPSEEK_API_KEY=sk-...
 
 不加 `--offline` 时走真实模型；缺少密钥会直接报错并提示改用 `--offline`，不会静默降级成假结果。
 
+模型 id 不是猜的：`LLM_MODEL` 的值取自 `curl https://api.deepseek.com/models`（Bearer 密钥）实测返回的
+`deepseek-v4-pro` 与 `deepseek-flash`。想换模型改这一行即可，写错名字会在第一次请求时直接报错，不会悄悄换模型。
+
 ## 评审入口（按题面验收点）
 
 | 验收点 | 用例 | 看什么 |
@@ -57,7 +60,7 @@ cp .env.example .env         # 填入 DEEPSEEK_API_KEY=sk-...
 src/        store / policy / tools / models / graph / trace / report / main
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   6 个用例的输入 + 实际输出 + trace + test-results.txt
-tests/      28 个 unittest（规则、工具守卫、图级链路、trace 结构）
+tests/      29 个 unittest（规则、工具守卫、图级链路、trace 结构）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘
 ```

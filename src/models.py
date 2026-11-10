@@ -174,7 +174,7 @@ def build_chat_model(mode: str, run: dict[str, Any]) -> Any:
     if not api_key:
         raise RuntimeError("缺少 DEEPSEEK_API_KEY；离线演示请加 --offline（Mock 只验证流程）")
     model = ChatOpenAI(
-        model=os.environ.get("LLM_MODEL", "deepseek-chat"),
+        model=os.environ.get("LLM_MODEL", "deepseek-v4-pro"),
         api_key=api_key,
         base_url=os.environ.get("LLM_BASE_URL", "https://api.deepseek.com"),
         temperature=float(os.environ.get("LLM_TEMPERATURE", "0")),
