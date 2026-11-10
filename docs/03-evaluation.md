@@ -4,7 +4,7 @@
 
 ```
 .venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 40 passed
-.venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 9 个用例
+.venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 10 个用例
 ```
 
 原始输出见 `examples/test-results.txt`。测试分三层：
@@ -13,13 +13,13 @@
 | --- | --- | --- |
 | 规则层 | `tests/test_policy.py` | R01-R05 的四种审核结论、时段网格、冲突与替代时段、替代时段的排序（近优先、间隔惩罚、偏好档加分） |
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具、替代时段的推荐理由随工具结果返回 |
-| 图级 | `tests/test_agent_flow.py` | 9 个用例端到端、多日冲突只在自己那一天待确认、频道冲突只在自己那一个频道待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
+| 图级 | `tests/test_agent_flow.py` | 10 个用例端到端、多日冲突只在自己那一天待确认、频道冲突只在自己那一个频道待确认、两条请求抢同一时段时不双订、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件 |
 | 输入层 | `tests/test_validation.py` | 6 个示例输入全部通过、同一素材重复出现时点名两条位置、缺 `requested_time` 时说明「不会替用户猜」、越界时间与未配置的日期/频道**不**在入口拦（留给工具）、`max_steps` 非正数被拒 |
 | 账本层 | `tests/test_store.py` | 两个实例各自写不互相覆盖（旧实现会从 2 份掉到 1 份）、别处写的确认项不被后来的草稿覆盖、锁被占用时等满超时报 `LedgerBusy` 且释放后照常可用 |
 | 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、`/api/custom` 与 CLI 同一套校验（重复素材 400）、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
 
-## 九个用例的实际结果（离线 Mock）
+## 十个用例的实际结果（离线 Mock）
 
 | 用例 | status | outcome | steps / tools | 关键观察 |
 | --- | --- | --- | --- | --- |
@@ -31,6 +31,7 @@
 | 06-step-limit | step_limit_reached | incomplete | 3 / 3 | 上限 3 步：M02 停在查询后未保存、M05 未处理；`completed=false`、`unfinished_materials=[M02, M05]` |
 | 08-day-overflow | completed | pending_confirmation | 6 / 5 | 11-14 整日排满、18:00 之后没有位置 → 工具返回 `next_available=2026-11-15 09:30` → 登记 `C-M01-2026-11-15-0930` → 存草稿 `draft_pending_confirmation`；`date_changed=true`、`published=false`（顺延同样要过确认） |
 | 09-channel | completed | pending_confirmation | 10 / 9 | 两条请求都在 `shorts`：M02 的 12:00 被 M00 占 → 提议 12:30 并待确认（`draft_id=D-M02-2026-11-12-1200-shorts`、确认项 `C-M02-2026-11-12-1230-shorts`）；M06 13:00 空闲 → `draft_ready`；主频道同一时刻仍是空的（不串道），两条 `published=false` |
+| 10-contention | completed | pending_confirmation | 10 / 9 | 两条硬性请求都要 13:00：M01 先落 `D-M01-2026-11-12-1300` 并占住时段；M02 再查时 13:00 已被同一轮运行里的草稿占了 → 提议 13:30，登记 `C-M02-2026-11-12-1330`，`draft_pending_confirmation`；同一次运行里没有两条落在同一格，`published=false` |
 | 07-multiday | completed | pending_confirmation | 10 / 9 | 两条请求都排 11-13：M06 的 09:00 被 M02 占 → 采纳工具给的首选替代 09:30 并待确认（`scheduled_date=2026-11-13`、`date_changed=false`）；M07 的 20:00 空闲 → `draft_ready`；两条 `published=false` |
 
 每条都可在 `examples/<case>.output.json`（结果）、`examples/<case>.trace.json`（分步动作/参数/观察/下一步）
@@ -58,7 +59,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-十六张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+十七张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -76,6 +77,7 @@
 | `docs/images/web-narrow.png` | 884px 窄屏（单列） | 三栏在 ≤1000px 折成一列，场景列表、执行区、结论依次堆叠；顶栏出现「耗时 43 毫秒」，说明计时来自本轮真实运行而不是写死 |
 | `docs/images/web-report-md.png` | 结论下方的报告导出 | 结论行下出现「导出 Markdown 报告」；点它下载的就是上面那份报告（同一份 `report` + 决策记录），`已发布 否` |
 | `docs/images/web-07-multiday.png` | 多日排期 | 页面顶部「2026-11-12 起 4 天」；时段带上方出现日期切换（11-13 激活）；11-13 明细列出 09:00 M02 / 09:30 草稿 M06 / 14:00 M00 / 20:00 草稿 M07；结论「待用户确认」、`已发布 false` |
+| `docs/images/web-10-contention.png` | 两条请求抢同一时段 | M01「已存草稿」13:00、M02「待确认」13:30 并带确认项 `C-M02-2026-11-12-1330`；时段带 13:00 与 13:30 两个草稿占位（`D-M01-2026-11-12-1300`、`D-M02-2026-11-12-1300`），没有一条被重复占用；`已发布 false` |
 | `docs/images/web-09-channel.png` | 短视频频道 | 频道标签「主频道 / 短视频频道」（激活后者）、hint 写「短视频频道 · 2026-11-12」；M02 与 M06 都带「短视频频道」chip；明细 12:00 已有排期 M00 / 12:30 与 13:00 草稿占位（id 带 `-shorts`）/ 18:00 M05；切回主频道后 12:00、13:00 是空的（同一时刻不串道） |
 | `docs/images/web-08-day-overflow.png` | 当天排满 · 顺延次日 | 11-14 标签页激活、整日都是「已有排期」；M01 行写「要求 2026-11-14 18:00 · 硬性 / 建议 2026-11-15 09:30 / 已改时段 / 已改日期」；确认项问题是「当天更晚的时段已排满，是否同意顺延到 2026-11-15 09:30？」；步骤 3 的观察摘要写明「顺延到 2026-11-15 09:30」 |
 
@@ -114,6 +116,7 @@
 .venv/Scripts/python.exe -m src.main --input examples/04-save-failure.input.json --out examples/04-save-failure.live.output.json --trace examples/04-save-failure.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/07-multiday.input.json --out examples/07-multiday.live.output.json --trace examples/07-multiday.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/08-day-overflow.input.json --out examples/08-day-overflow.live.output.json --trace examples/08-day-overflow.live.trace.json --report-md examples/08-day-overflow.live.report.md
+.venv/Scripts/python.exe -m src.main --input examples/10-contention.input.json --out examples/10-contention.live.output.json --trace examples/10-contention.live.trace.json --report-md examples/10-contention.live.report.md --ledger .runtime/live10.json
 .venv/Scripts/python.exe -m src.main --input examples/09-channel.input.json --out examples/09-channel.live.output.json --trace examples/09-channel.live.trace.json --report-md examples/09-channel.live.report.md --ledger .runtime/live09.json
 # 先跑一次留下待确认项，再否决它并用真实模型重跑：模型不会绕过否决
 .venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline --ledger .runtime/rejected.json
@@ -124,6 +127,7 @@
 | --- | --- | --- | --- |
 | 02-conflict | 第 1 轮并行 `read_material` + `check_rules` → 第 2 轮 `query_time_slot`(18:00) 看到被 M00 占用 → 第 3 轮 `request_confirmation`(C-M01-2026-11-12-1900) → 第 4 轮 `save_draft`(19:00) | completed / pending_confirmation，5 次工具调用 / 5 轮；`draft_pending_confirmation`、`published=false` | Mock 串行 6 轮；真实模型把两个无依赖的读取并行发出，少一轮，决策顺序与结论一致 |
 | 04-save-failure | 第 1 轮并行 `read_material` + `check_rules` + `query_time_slot`(15:00) → 第 2 轮 `save_draft` 收 `SAVE_FAILED` → 第 3 轮重试一次仍失败 → 收尾 | completed / failed，5 次工具调用 / 4 轮；`failed_save_attempts=2`、无草稿 | Mock 串行 5 轮；结论相同（重试一次后如实放弃） |
+| 10-contention | `read_material`(M01) → `check_rules` → `query_time_slot`(13:00) → `save_draft`(13:00) → 再 `read_material`(M02) → `query_time_slot`(13:00 → 已被 M01 草稿占用) → `request_confirmation`(`C-M02-2026-11-12-1330`) → `save_draft`(13:30) | completed / pending_confirmation，10 次工具调用 / 7 轮；M01 `draft_ready`、M02 `draft_pending_confirmation`，两条 `published=false` | Mock 10 轮 / 9 次；真实模型自己发现"13:00 已被 M01 的草稿占用"，原话是"不能擅自改动硬性时间"，没有把两条排到同一格 |
 | 09-channel | 第 1 轮并行 `read_material`×2 → 第 2 轮并行 `check_rules`×2 → 第 3 轮并行 `query_time_slot`(shorts 12:00 / 13:00) → 第 4 轮并行 `request_confirmation`(C-M02-2026-11-12-1230-shorts) + `save_draft`(M06 13:00) → 第 5 轮 `save_draft`(M02 12:30) | completed / pending_confirmation，9 次工具调用 / 6 轮；M02 `draft_pending_confirmation`、M06 `draft_ready`，两条 `channel=shorts`、`published=false` | Mock 10 轮；真实模型每次调用都显式带上 `channel=shorts`，没有被主频道同名时段带跑；确认项 id 也带 `-shorts` |
 | 07-multiday | 并行读两条素材 → 分别 `query_time_slot`(11-13 09:00 / 20:00) → 对 09:00 的冲突 `request_confirmation`(C-M06-2026-11-13-0930) → 两条 `save_draft`(09:30 待确认 / 20:00 直接存) | completed / pending_confirmation，9 次工具调用 / 8 轮；M06 `scheduled_date=2026-11-13`、09:30、`draft_pending_confirmation`；M07 20:00 `draft_ready`；`published=false` | Mock 10 轮；真实模型同样按天归因、只对冲突那条请求确认，另一条不打扰用户 |
 | 08-day-overflow | `read_material` → `check_rules` → `query_time_slot`(11-14 18:00) 看到整日 24 格已满、收 `next_available=2026-11-15 09:30` → `request_confirmation`(C-M01-2026-11-15-0930) → `save_draft`(11-15 09:30) | completed / pending_confirmation，5 次工具调用 / 5 轮；`date_changed=true`、`draft_pending_confirmation`、`published=false`；总结里写「没有擅自抢 M05 的时段，也没有直接改期」 | 与 Mock 的 5 次调用 / 6 轮几乎同构；真实模型额外把「或由人工协调释放 18:00」作为第二个选项交回用户 |

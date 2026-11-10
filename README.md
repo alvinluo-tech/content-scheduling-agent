@@ -19,7 +19,7 @@ uv venv .venv && uv pip install --python .venv/Scripts/python.exe -r requirement
   --out examples/02-conflict.output.json --trace examples/02-conflict.trace.json \
   --report-md examples/02-conflict.report.md
 
-# 3. 一次跑完全部 9 个用例（会重置草稿账本）
+# 3. 一次跑完全部 10 个用例（会重置草稿账本）
 .venv/Scripts/python.exe scripts/run_examples.py
 
 # 4. 跑测试
@@ -72,7 +72,7 @@ CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的
 之后走的还是同一条 SSE + StateGraph 链路——冲突、规则风险仍由工具判定，不因为是从界面上手填的就放宽。
 这类请求只活在当前进程的内存里，重启服务即消失。
 
-左侧九个场景就是 `examples/` 里的输入，点「运行这个场景」会跑一次并把报告、时段带、决策记录渲染出来；
+左侧十个场景就是 `examples/` 里的输入，点「运行这个场景」会跑一次并把报告、时段带、决策记录渲染出来；
 「离线 Mock」勾选状态与 CLI 的 `--offline` 对应，取消勾选才走真实模型。演示账本写到 `.runtime/ledger.json`，
 不污染 `data/drafts.json`。
 
@@ -96,7 +96,7 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 `web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）、
 `web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）、
 `web-02-conflict-streaming.png`（真实模型运行中的一帧：右栏逐条推送，中间上一轮结论压暗）、
-`web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、`web-08-day-overflow.png`（当天排满：11-14 整日有排期，改期到 11-15 09:30 待确认）、`web-09-channel.png`（短视频频道：12:00 被占，主频道同一时刻是空的）、
+`web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、`web-08-day-overflow.png`（当天排满：11-14 整日有排期，改期到 11-15 09:30 待确认）、`web-09-channel.png`（短视频频道：12:00 被占，主频道同一时刻是空的）、`web-10-contention.png`（两条请求抢 13:00：M01 已存草稿、M02 改到 13:30 待确认）、
 `web-02-conflict-replan.png`（待确认项下面多了「工具给过的候选 + 改到所选时段」）、`web-02-conflict-replanned.png`（改选 20:30 之后：确认项显示「已否决」与「已同意 · 改选自 C-M01-2026-11-12-1900 · 由 human 于 … 决定」，结论「已排期 · 仅草稿」、草稿 `draft_ready`、`published` 仍为 false）、`web-02-conflict-rejected.png`（人点了「不同意这个改期」之后：结论变「存在失败项」、草稿标为「已否决 · 草稿作废」）、`web-report-md.png`（结论下方多出「导出 Markdown 报告」）、`web-custom-request.png`（左栏展开自定义表单：素材 M01 要求 11-12 18:00，跑出来仍是「待用户确认」+ 建议 19:00）、`web-narrow.png`（884px 窄屏：单列堆叠，顶栏显示本轮耗时）。
 键盘操作：`↑`/`↓`（或 `←`/`→`）在场景间移动、`Ctrl/⌘ + Enter` 运行，焦点有可见描边。
 
@@ -112,6 +112,7 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 | 保存失败 | `examples/04-save-failure.*` | `result_status=save_failed`，无草稿，不谎报成功 |
 | 步数上限 | `examples/06-step-limit.*` | `status=step_limit_reached`、`completed=false`、列出未完成素材 |
 | 当天排满 · 顺延 | `examples/08-day-overflow.*` | 11-14 整日排满、18:00 之后无位置 → 工具给出次日 09:30，模型先登记 `C-M01-2026-11-15-0930` 再存草稿：`scheduled_date=2026-11-15`、`date_changed=true`、`draft_pending_confirmation`、`published=false` |
+| 竞争 | `examples/10-contention.*` | 两条硬性请求都要 13:00：M01 先占住，M02 自己查到时已被占 → 提议 13:30 待确认。同一次运行内也不双订 |
 | 多频道 | `examples/09-channel.*` | 两条都在 `shorts`：12:00 被 M00 占 → 提议 12:30 待确认；13:00 空着直接落草稿。主频道同一时刻仍是空的（不串道），草稿 id 带 `-shorts` |
 | 多日排期 | `examples/07-multiday.*` | M06 在 11-13 09:00 被 M02 占 → `scheduled_date=2026-11-13`、`suggested_time=09:30`、待确认；M07 同一天 20:00 直接落草稿；`published=false` |
 
@@ -122,9 +123,9 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 ```
 src/        store / policy / tools / models / graph / trace / report / markdown / main / server（Web 演示用，标准库 http.server）
 data/       合成素材、审核规则、已有排期、草稿账本
-examples/   9 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
+examples/   10 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      83 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子）
+tests/      85 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```
