@@ -53,7 +53,10 @@
           "question": "2026-11-14 18:00 是硬性要求，但当天更晚的时段已排满，是否同意顺延到 2026-11-15 09:30？",
           "proposed_date": "2026-11-15",
           "proposed_time": "09:30",
-          "status": "pending"
+          "status": "pending",
+          "decided_by": null,
+          "decided_at": null,
+          "replanned_from": null
         }
       ],
       "slot_options": [

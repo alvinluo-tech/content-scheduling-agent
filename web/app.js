@@ -29,6 +29,11 @@
     incomplete: "步数上限中断"
   };
 
+  var CONFIRM_STATUS = {
+    pending: "待拍板",
+    approved: "已同意",
+    rejected: "已否决"
+  };
   var DRAFT_STATUS = {
     draft_ready: "已存草稿",
     draft_pending_confirmation: "待确认草稿",
@@ -455,8 +460,14 @@
       var list = el("ul", "confirm-list");
       m.pending_confirmations.forEach(function (item) {
         var conf = el("li");
-        conf.appendChild(el("span", "mono", text(item.confirmation_id) + " · " + text(item.status)));
+        conf.appendChild(el("span", "mono", text(item.confirmation_id) + " · " + text(CONFIRM_STATUS[item.status] || item.status)));
         conf.appendChild(el("div", null, text(item.question)));
+        if (item.replanned_from) {
+          conf.appendChild(el("div", "confirm-note", "改选自 " + text(item.replanned_from)));
+        }
+        if (item.decided_by) {
+          conf.appendChild(el("div", "confirm-note", "由 " + text(item.decided_by) + " 于 " + text(item.decided_at || "—") + " 决定"));
+        }
         if (item.status === "pending") {
           var actions = el("div", "confirm-actions");
           var approve = el("button", "confirm-btn", "记为用户已确认");
@@ -489,7 +500,7 @@
         }
         list.appendChild(conf);
       });
-      right.appendChild(kv("待确认", list));
+      right.appendChild(kv("确认项", list));
     }
 
     if (m.draft) {

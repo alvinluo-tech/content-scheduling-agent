@@ -28,6 +28,20 @@ class MarkdownReportTest(unittest.TestCase):
         self.assertNotIn("已发布：是", text)
         self.assertIn("published 恒为 false", text)
 
+    def test_human_decision_shows_who_when_and_which_version(self) -> None:
+        report = load("02-conflict", "output")
+        item = report["materials"][0]["pending_confirmations"][0]
+        item["status"] = "approved"
+        item["decided_by"] = "human"
+        item["decided_at"] = "2026-11-12T10:05:00"
+        item["replanned_from"] = "C-M01-2026-11-12-1900"
+        text = render_report(report, load("02-conflict", "trace"))
+        self.assertIn("已同意", text)
+        self.assertIn("human", text)
+        self.assertIn("2026-11-12T10:05:00", text)
+        self.assertIn("改选自 " + item["replanned_from"], text)
+        self.assertNotIn("改选自 None", text)
+
     def test_decision_table_lists_every_tool_call(self) -> None:
         trace = load("02-conflict", "trace")
         text = render_report(load("02-conflict", "output"), trace)

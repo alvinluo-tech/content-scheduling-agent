@@ -128,6 +128,10 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                         "proposed_date": c.get("proposed_date", c.get("date")),
                         "proposed_time": c["proposed_time"],
                         "status": c["status"],
+                        # 人的拍板要留痕：谁、什么时候、是同意这一版还是改选了别的时段。
+                        "decided_by": c.get("approved_by") or c.get("rejected_by") or c.get("decided_by"),
+                        "decided_at": c.get("approved_at") or c.get("rejected_at") or c.get("decided_at"),
+                        "replanned_from": c.get("replanned_from"),
                     }
                     for c in confirmations
                 ],

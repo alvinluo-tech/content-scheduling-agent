@@ -207,6 +207,10 @@ class ServerTestCase(unittest.TestCase):
         self.assertFalse(after["requires_user_confirmation"])
         self.assertEqual(after["draft"]["status"], "draft_ready")
         self.assertFalse(report["published"])
+        # 人的拍板要能只读报告就看到：谁、什么时候、批的是哪一版。
+        decided = [c for c in after["pending_confirmations"] if c["status"] == "approved"][0]
+        self.assertEqual(decided["decided_by"], "human")
+        self.assertTrue(decided["decided_at"])
 
     def test_human_can_replan_to_another_slot_instead_of_accepting(self) -> None:
         status, body = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})

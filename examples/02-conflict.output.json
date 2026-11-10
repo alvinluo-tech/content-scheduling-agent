@@ -53,7 +53,10 @@
           "question": "18:00 是硬性要求但已被占用，是否同意改到 19:00？",
           "proposed_date": "2026-11-12",
           "proposed_time": "19:00",
-          "status": "pending"
+          "status": "pending",
+          "decided_by": null,
+          "decided_at": null,
+          "replanned_from": null
         }
       ],
       "slot_options": [

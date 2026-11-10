@@ -20,6 +20,7 @@ test_trace_schema (tests.test_agent_flow.AgentFlowTest.test_trace_schema) ... ok
 test_cli_writes_markdown_file (tests.test_markdown.MarkdownReportTest.test_cli_writes_markdown_file) ... ok
 test_conflict_report_keeps_confirmation_and_never_claims_publish (tests.test_markdown.MarkdownReportTest.test_conflict_report_keeps_confirmation_and_never_claims_publish) ... ok
 test_decision_table_lists_every_tool_call (tests.test_markdown.MarkdownReportTest.test_decision_table_lists_every_tool_call) ... ok
+test_human_decision_shows_who_when_and_which_version (tests.test_markdown.MarkdownReportTest.test_human_decision_shows_who_when_and_which_version) ... ok
 test_save_failure_is_reported_as_not_saved (tests.test_markdown.MarkdownReportTest.test_save_failure_is_reported_as_not_saved) ... ok
 test_step_limit_report_lists_unfinished_materials (tests.test_markdown.MarkdownReportTest.test_step_limit_report_lists_unfinished_materials) ... ok
 test_banned_term_is_risk (tests.test_policy.PolicyTest.test_banned_term_is_risk) ... ok
@@ -84,6 +85,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 79 tests in 5.854s
+Ran 80 tests in 7.950s
 
 OK

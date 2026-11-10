@@ -83,9 +83,17 @@ def _material_section(row: dict[str, Any], index: int) -> list[str]:
         lines.append("- 建议：" + str(where) + " " + str(row["suggested_time"]) + suffix)
         lines.append("- 硬性要求保持不变：" + _yes(row.get("hard_time_preserved")))
     for item in row.get("pending_confirmations") or []:
+        decided: list[str] = []
+        if item.get("replanned_from"):
+            decided.append("改选自 " + str(item["replanned_from"]))
+        if item.get("decided_by"):
+            decided.append(str(item["decided_by"]))
+        if item.get("decided_at"):
+            decided.append(str(item["decided_at"]))
+        tail = "（" + "、".join(decided) + "）" if decided else ""
         lines.append(
-            "- 待确认 " + _code(item["confirmation_id"]) + "（" + PENDING_LABEL.get(str(item["status"]), str(item["status"])) + "）："
-            + str(item["question"]) + " → 建议 " + str(item.get("proposed_date")) + " " + str(item["proposed_time"])
+            "- 确认项 " + _code(item["confirmation_id"]) + "（" + PENDING_LABEL.get(str(item["status"]), str(item["status"])) + "）："
+            + str(item["question"]) + " → 建议 " + str(item.get("proposed_date")) + " " + str(item["proposed_time"]) + tail
         )
     draft = row.get("draft")
     if draft:
