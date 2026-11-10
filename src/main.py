@@ -37,24 +37,45 @@ def resolve_max_steps(cli_value: int | None, run: dict[str, Any]) -> int:
     return int(os.environ.get("MAX_STEPS", DEFAULT_MAX_STEPS))
 
 
-def run_once(args: argparse.Namespace) -> dict[str, Any]:
-    run: dict[str, Any] = json.loads(Path(args.input).read_text(encoding="utf-8"))
-    store = Store(args.data_dir, args.ledger)
+def run_pipeline(
+    run: dict[str, Any],
+    *,
+    data_dir: str | Path,
+    ledger: str | Path | None,
+    max_steps: int | None = None,
+    offline: bool = False,
+    run_id: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """跑一遍图，返回 (报告, 轨迹)。CLI 与 Web 演示层共用这一条路径，避免两套行为。"""
+    store = Store(data_dir, ledger)
     toolbox = Toolbox(store, run)
-    max_steps = resolve_max_steps(args.max_steps, run)
-    mode = "offline" if args.offline else "deepseek"
+    steps = resolve_max_steps(max_steps, run)
+    mode = "offline" if offline else "deepseek"
     llm = build_chat_model(mode, run)
     model_name = getattr(llm, "model_name", None) or getattr(llm, "mode", mode)
-    trace = TraceRecorder(run.get("run_id", Path(args.input).stem), mode, str(model_name))
+    trace = TraceRecorder(run.get("run_id") or run_id or "run", mode, str(model_name))
     system_text = build_system_prompt(run, store.schedule_date(), store.operating_hours())
-    graph = build_agent_graph(llm, toolbox, trace, max_steps, system_text)
+    graph = build_agent_graph(llm, toolbox, trace, steps, system_text)
     state = graph.invoke(
         {"messages": [HumanMessage(content="请按系统提示处理本次排期请求。")], "steps": 0, "tool_calls": 0}
     )
-    limits = {"max_steps": max_steps, "steps_used": state.get("steps", 0), "tool_calls": state.get("tool_calls", 0)}
+    limits = {"max_steps": steps, "steps_used": state.get("steps", 0), "tool_calls": state.get("tool_calls", 0)}
     report = build_report(run, store, toolbox, trace, limits)
+    return report, trace.as_dict(limits)
+
+
+def run_once(args: argparse.Namespace) -> dict[str, Any]:
+    run: dict[str, Any] = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    report, trace_dict = run_pipeline(
+        run,
+        data_dir=args.data_dir,
+        ledger=args.ledger,
+        max_steps=args.max_steps,
+        offline=args.offline,
+        run_id=Path(args.input).stem,
+    )
     if args.trace:
-        atomic_write_json(Path(args.trace), trace.as_dict(limits))
+        atomic_write_json(Path(args.trace), trace_dict)
         report["trace_file"] = str(args.trace)
     if args.out:
         atomic_write_json(Path(args.out), report)

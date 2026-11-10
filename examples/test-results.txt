@@ -17,6 +17,17 @@ test_missing_info_blocks_drafting (tests.test_policy.PolicyTest.test_missing_inf
 test_pass_material_is_draftable (tests.test_policy.PolicyTest.test_pass_material_is_draftable) ... ok
 test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_grid_matches_operating_hours) ... ok
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
+test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
+test_index_is_served (tests.test_server.ServerTestCase.test_index_is_served) ... ok
+test_path_traversal_is_refused (tests.test_server.ServerTestCase.test_path_traversal_is_refused) ... ok
+test_repeated_submission_keeps_one_draft (tests.test_server.ServerTestCase.test_repeated_submission_keeps_one_draft) ... ok
+test_report_never_claims_publication (tests.test_server.ServerTestCase.test_report_never_claims_publication) ... ok
+test_reset_clears_ledger (tests.test_server.ServerTestCase.test_reset_clears_ledger) ... ok
+test_run_conflict_case_saves_draft_without_publishing (tests.test_server.ServerTestCase.test_run_conflict_case_saves_draft_without_publishing) ... ok
+test_state_endpoint_describes_the_workbench (tests.test_server.ServerTestCase.test_state_endpoint_describes_the_workbench) ... ok
+test_static_css_is_served_with_right_content_type (tests.test_server.ServerTestCase.test_static_css_is_served_with_right_content_type) ... ok
+test_unknown_api_is_404 (tests.test_server.ServerTestCase.test_unknown_api_is_404) ... ok
+test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_case_is_rejected) ... ok
 test_confirmed_hard_time_change_saves_draft_without_publishing (tests.test_tools.ToolboxTest.test_confirmed_hard_time_change_saves_draft_without_publishing) ... ok
 test_duplicate_submission_is_deduplicated (tests.test_tools.ToolboxTest.test_duplicate_submission_is_deduplicated) ... ok
 test_hard_time_change_requires_confirmation (tests.test_tools.ToolboxTest.test_hard_time_change_requires_confirmation) ... ok
@@ -31,6 +42,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 29 tests in 1.721s
+Ran 40 tests in 2.753s
 
 OK

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>排期台 · 素材审核与发布排期</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到主要内容</a>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">排期台</span>
+    <span class="brand-sub">素材审核与发布排期 · 只出草稿，不发布</span>
+  </div>
+  <dl class="meta">
+    <div><dt>日期</dt><dd id="meta-date">—</dd></div>
+    <div><dt>频道</dt><dd id="meta-channel">—</dd></div>
+    <div><dt>账本</dt><dd id="meta-ledger" class="mono">—</dd></div>
+  </dl>
+  <div class="env" id="env-chip" data-mode="offline">离线 Mock</div>
+</header>
+
+<main id="main" class="grid">
+  <aside class="rail rail-left">
+    <section class="panel cases-panel">
+      <h2 class="panel-title">场景<em>6 个验收用例</em></h2>
+      <ol class="cases" id="cases"></ol>
+    </section>
+    <section class="panel run-panel">
+      <h2 class="panel-title">执行</h2>
+      <label class="switch">
+        <input type="checkbox" id="offline" checked>
+        <span>离线 Mock<em>不调真实模型，只验证流程</em></span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="reset-ledger" checked>
+        <span>运行前清空演示账本<em>重复提交场景需要保留账本</em></span>
+      </label>
+      <label class="field">步数上限
+        <input type="number" id="max-steps" min="1" max="60" placeholder="默认 20" inputmode="numeric">
+      </label>
+      <button type="button" id="run" class="primary">运行这个场景<span class="kbd">Ctrl/⌘ ↵</span></button>
+      <p class="fine" id="run-hint">草稿只写演示账本 .runtime/ledger.json。</p>
+    </section>
+  </aside>
+
+  <section class="work">
+    <div class="empty" id="empty">
+      <p class="empty-title">还没有运行记录</p>
+      <p>左侧选一个场景，点“运行这个场景”。报告与决策记录会按工具真实返回渲染，不采信模型自述。</p>
+    </div>
+
+    <div id="results" hidden>
+      <div class="verdict">
+        <div class="verdict-main">
+          <p class="eyebrow" id="verdict-sub">运行结论</p>
+          <p class="outcome" id="outcome">—</p>
+        </div>
+        <ul class="counters" id="counters"></ul>
+      </div>
+
+      <h2 class="section-title"><span class="num">01</span>素材结论<em>每一条都能在工具账本里查到出处</em></h2>
+      <ul class="materials" id="materials"></ul>
+
+      <h2 class="section-title"><span class="num">02</span>当日时段<em id="timeline-hint">09:00–21:00 · 30 分钟一格</em></h2>
+      <div class="timeline" id="timeline" role="img" aria-label="当日时段占用图"></div>
+      <div class="timeline-scale" id="timeline-scale" aria-hidden="true"></div>
+      <ul class="legend">
+        <li><span class="swatch occupied"></span>已有排期</li>
+        <li><span class="swatch suggested"></span>建议时段</li>
+        <li><span class="swatch drafted"></span>草稿占位</li>
+        <li><span class="swatch free"></span>空闲</li>
+      </ul>
+      <ul class="slot-ledger" id="slot-ledger"></ul>
+
+      <section class="summary">
+        <h2 class="section-title"><span class="num">03</span>模型自述<em>只作参考，以素材结论为准</em></h2>
+        <pre id="agent-summary"></pre>
+        <p class="fine" id="footer-note"></p>
+      </section>
+    </div>
+  </section>
+
+  <aside class="rail rail-right">
+    <section class="panel trace-panel">
+      <h2 class="panel-title">决策记录<em id="trace-limits">未运行</em></h2>
+      <ol class="trace" id="trace"></ol>
+    </section>
+  </aside>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

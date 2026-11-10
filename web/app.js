@@ -1,0 +1,463 @@
+(function () {
+  "use strict";
+
+  var STATUS = {
+    scheduled_draft: { label: "已存草稿", tone: "pass" },
+    scheduled_pending_confirmation: { label: "待确认", tone: "warn" },
+    needs_info: { label: "信息不足", tone: "warn" },
+    blocked: { label: "规则阻断", tone: "block" },
+    save_failed: { label: "保存失败", tone: "block" },
+    material_not_found: { label: "素材不存在", tone: "block" },
+    unresolved: { label: "未完成", tone: "muted" },
+    not_processed: { label: "未处理", tone: "muted" }
+  };
+
+  var STATUS_LABEL = {
+    completed: "推理正常收尾",
+    step_limit_reached: "达到步数上限",
+    model_error: "模型调用失败",
+    tool_error: "工具异常中断",
+    aborted: "运行中断"
+  };
+
+  var OUTCOME = {
+    scheduled: "已排期 · 仅草稿",
+    pending_confirmation: "待用户确认",
+    partial: "部分完成",
+    failed: "存在失败项",
+    incomplete: "步数上限中断"
+  };
+
+  var DRAFT_STATUS = {
+    draft_ready: "已存草稿",
+    draft_pending_confirmation: "待确认草稿"
+  };
+
+  var REVIEW = {
+    pass: "审核通过",
+    pass_with_warnings: "通过 · 有警告",
+    risk: "规则风险",
+    missing_info: "信息缺失",
+    missing: "信息缺失"
+  };
+
+  var REVIEW_TONE = {
+    pass: "pass",
+    pass_with_warnings: "warn",
+    risk: "block",
+    missing_info: "block",
+    missing: "block"
+  };
+
+  var selected = "02-conflict";
+  var state = null;
+  var running = false;
+
+  function $(id) { return document.getElementById(id); }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) { node.className = cls; }
+    if (text !== undefined && text !== null) { node.textContent = String(text); }
+    return node;
+  }
+
+  function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
+
+  function text(value, fallback) {
+    if (value === null || value === undefined || value === "") { return fallback === undefined ? "—" : fallback; }
+    return String(value);
+  }
+
+  function chip(label, tone) {
+    return el("span", "chip tone-" + (tone || "muted"), label);
+  }
+
+  function fetchJSON(url, options) {
+    return fetch(url, options).then(function (resp) {
+      return resp.json().then(function (body) {
+        if (!resp.ok || body.status === "error") {
+          throw new Error(body.error || ("HTTP " + resp.status));
+        }
+        return body;
+      });
+    });
+  }
+
+  /* ---------- static chrome ---------- */
+  function renderMeta(data) {
+    $("meta-date").textContent = text(data.date);
+    $("meta-channel").textContent = data.channel === "main" ? "主频道" : text(data.channel);
+    $("meta-ledger").textContent = text(data.ledger);
+  }
+
+  function renderEnv(offline) {
+    var node = $("env-chip");
+    node.dataset.mode = offline ? "offline" : "deepseek";
+    node.textContent = offline ? "离线 Mock" : "真实模型";
+  }
+
+  function renderCases(list) {
+    var root = $("cases");
+    clear(root);
+    list.forEach(function (item, index) {
+      var li = el("li");
+      var btn = el("button", "case");
+      btn.type = "button";
+      btn.dataset.case = item.file;
+      btn.setAttribute("aria-current", item.file === selected ? "true" : "false");
+      btn.appendChild(el("span", "case-index", String(index + 1).padStart(2, "0")));
+      btn.appendChild(el("span", "case-title", item.title));
+      btn.appendChild(el("span", "case-tag", item.tag));
+      btn.appendChild(el("span", "case-note", item.note));
+      btn.addEventListener("click", function () { select(item.file); });
+      li.appendChild(btn);
+      root.appendChild(li);
+    });
+  }
+
+  function select(name) {
+    selected = name;
+    Array.prototype.forEach.call(document.querySelectorAll(".case"), function (node) {
+      node.setAttribute("aria-current", node.dataset.case === name ? "true" : "false");
+    });
+  }
+
+  /* ---------- timeline ---------- */
+  function toMinutes(hhmm) {
+    var parts = String(hhmm || "00:00").split(":");
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  function buildSlots(data) {
+    var hours = data.hours || {};
+    var start = toMinutes(hours.start || "09:00");
+    var end = toMinutes(hours.end || "21:00");
+    var step = hours.granularity_min || 30;
+    var slots = [];
+    for (var m = start; m < end; m += step) {
+      slots.push({ minutes: m, time: pad(Math.floor(m / 60)) + ":" + pad(m % 60), hour: m % 60 === 0 });
+    }
+    return slots;
+  }
+
+  function renderTimeline(data, report) {
+    var root = $("timeline");
+    var scale = $("timeline-scale");
+    var ledger = $("slot-ledger");
+    clear(root);
+    clear(scale);
+    clear(ledger);
+    var hours = data.hours || {};
+    $("timeline-hint").textContent = text(hours.start) + "–" + text(hours.end) + " · " + (hours.granularity_min || 30) + " 分钟一格";
+
+    var slots = buildSlots(data);
+    var cells = {};
+    slots.forEach(function (slot) { cells[slot.time] = { slot: slot, booked: null, suggested: null, drafted: null }; });
+
+    (data.slots || []).forEach(function (item) {
+      if (cells[item.time]) { cells[item.time].booked = item.material_id; }
+    });
+    var drafts = data.drafts || {};
+    Object.keys(drafts).forEach(function (key) {
+      var rec = drafts[key] || {};
+      if (rec.scheduled_time && cells[rec.scheduled_time]) {
+        cells[rec.scheduled_time].drafted = rec.draft_id || rec.material_id;
+      }
+    });
+    var materials = (report && report.materials) || [];
+    materials.forEach(function (m) {
+      if (m.suggested_time && cells[m.suggested_time]) { cells[m.suggested_time].suggested = m.material_id; }
+    });
+
+    slots.forEach(function (slot) {
+      var cell = cells[slot.time];
+      var node = el("div", "slot");
+      if (slot.hour) { node.dataset.hour = "true"; } else { node.dataset.half = "true"; }
+      var labels = [slot.time];
+      if (cell.booked) { node.classList.add("is-occupied"); labels.push("已占用 " + cell.booked); }
+      if (cell.drafted) { node.classList.add("is-drafted"); labels.push("草稿 " + cell.drafted); }
+      if (cell.suggested) { node.classList.add("is-suggested"); labels.push("建议 " + cell.suggested); }
+      if (!cell.booked && !cell.drafted && !cell.suggested) { labels.push("空闲"); }
+      node.title = labels.join(" · ");
+      root.appendChild(node);
+    });
+
+    slots.forEach(function (slot) {
+      if (!slot.hour) { return; }
+      scale.appendChild(el("span", null, slot.time));
+    });
+
+    var rows = slots.filter(function (slot) {
+      var cell = cells[slot.time];
+      return cell.booked || cell.drafted || cell.suggested;
+    });
+    if (!rows.length) {
+      ledger.appendChild(el("li", "hint", "当前账本没有占用，也没有建议时段"));
+      return;
+    }
+    rows.forEach(function (slot) {
+      var cell = cells[slot.time];
+      var li = el("li");
+      li.appendChild(el("span", "t", slot.time));
+      var tags = [];
+      if (cell.booked) { tags.push("已有排期"); }
+      if (cell.drafted) { tags.push("草稿占位"); }
+      if (cell.suggested) { tags.push("建议"); }
+      li.appendChild(el("span", "hint", tags.join(" · ")));
+      var ids = [];
+      if (cell.booked) { ids.push(cell.booked); }
+      if (cell.drafted) { ids.push(cell.drafted); }
+      if (cell.suggested) { ids.push(cell.suggested); }
+      li.appendChild(el("span", "id", ids.join(" → ")));
+      ledger.appendChild(li);
+    });
+  }
+
+  /* ---------- report ---------- */
+  function counter(label, value, tone) {
+    var li = el("li");
+    li.appendChild(el("span", "k", label));
+    var v = el("span", "v" + (tone ? " " + tone : ""), value);
+    li.appendChild(v);
+    return li;
+  }
+
+  function renderVerdict(report) {
+    var outcome = report.outcome || "failed";
+    $("outcome").textContent = OUTCOME[outcome] || outcome;
+    var terminal = STATUS_LABEL[report.status] || ("未正常收尾：" + text(report.status));
+    $("verdict-sub").textContent = "运行结论 · " + terminal;
+
+    var counters = $("counters");
+    clear(counters);
+    var limits = report.limits || {};
+    counters.appendChild(counter("步数", text(limits.steps_used) + " / " + text(limits.max_steps)));
+    counters.appendChild(counter("工具调用", text(limits.tool_calls)));
+    var failed = report.unfinished_materials && report.unfinished_materials.length;
+    counters.appendChild(counter("已发布", report.published ? "true" : "false", report.published ? "is-fail" : "is-ok"));
+    counters.appendChild(counter("未完成素材", failed ? String(failed) : "0", failed ? "is-fail" : "is-ok"));
+  }
+
+  function kv(term, value) {
+    var dl = document.createElement("dl");
+    dl.className = "kv";
+    dl.appendChild(el("dt", null, term));
+    var dd = el("dd");
+    if (value instanceof Node) { dd.appendChild(value); } else { dd.textContent = value; }
+    dl.appendChild(dd);
+    return dl;
+  }
+
+  function idText(value) {
+    return el("span", "mono", text(value));
+  }
+
+  function renderMaterial(m) {
+    var li = el("li", "material");
+    var status = STATUS[m.result_status] || { label: text(m.result_status), tone: "muted" };
+
+    var left = el("div", "m-body");
+    var head = el("div", "m-head");
+    head.appendChild(el("span", "m-id", text(m.material_id)));
+    head.appendChild(chip(status.label, status.tone));
+    left.appendChild(head);
+    left.appendChild(el("h3", "m-title", text(m.title)));
+
+    var facts = el("div", "m-facts");
+    facts.appendChild(el("span", null, "要求 " + text(m.requested_time) + (m.time_hard ? " · 硬性" : " · 可调整")));
+    facts.appendChild(el("span", null, "建议 " + text(m.suggested_time)));
+    if (m.time_changed) { facts.appendChild(el("span", null, "已改时段")); }
+    if (m.time_hard && m.hard_time_preserved === false) { facts.appendChild(el("span", "flag", "硬性要求未满足")); }
+    left.appendChild(facts);
+
+    var right = el("div", "m-decision");
+
+    var reviewTone = REVIEW_TONE[m.review_status] || "muted";
+    var reviewLine = el("span");
+    reviewLine.appendChild(chip(REVIEW[m.review_status] || text(m.review_status), reviewTone));
+    if (m.requires_manual_review) { reviewLine.appendChild(el("span", "note-inline", " 需人工复核")); }
+    right.appendChild(kv("审核", reviewLine));
+
+    if (m.risk_reasons && m.risk_reasons.length) {
+      var risks = el("ul", "risk-list");
+      m.risk_reasons.forEach(function (item) {
+        if (item && typeof item === "object") {
+          var li = el("li");
+          if (item.rule_id) { li.appendChild(el("span", "mono", item.rule_id + " ")); }
+          li.appendChild(el("span", null, text(item.reason)));
+          if (item.severity) { li.classList.add("sev-" + item.severity); }
+          risks.appendChild(li);
+        } else {
+          risks.appendChild(el("li", null, text(item)));
+        }
+      });
+      right.appendChild(kv("风险", risks));
+    }
+    if (m.missing_fields && m.missing_fields.length) {
+      right.appendChild(kv("缺失字段", el("span", "mono", m.missing_fields.join("、"))));
+    }
+
+    if (m.pending_confirmations && m.pending_confirmations.length) {
+      var list = el("ul", "confirm-list");
+      m.pending_confirmations.forEach(function (item) {
+        var conf = el("li");
+        conf.appendChild(el("span", "mono", text(item.confirmation_id) + " · " + text(item.status)));
+        conf.appendChild(el("div", null, text(item.question)));
+        list.appendChild(conf);
+      });
+      right.appendChild(kv("待确认", list));
+    }
+
+    if (m.draft) {
+      var draftLine = el("span");
+      draftLine.appendChild(idText(m.draft.draft_id));
+      draftLine.appendChild(el("span", "note-inline", " · " + text(DRAFT_STATUS[m.draft.status] || m.draft.status) + " · 提交 " + text(m.draft.submit_count) + " 次 · 发布 " + text(m.draft.published)));
+      right.appendChild(kv("草稿", draftLine));
+    } else {
+      right.appendChild(kv("草稿", el("span", "note-inline", m.failed_save_attempts ? "未保存（失败 " + m.failed_save_attempts + " 次）" : "未落库")));
+    }
+
+    if (m.note) { right.appendChild(kv("说明", el("span", "note-inline", m.note))); }
+
+    li.appendChild(left);
+    li.appendChild(right);
+    return li;
+  }
+  function renderReport(report, trace) {
+    $("empty").hidden = true;
+    var results = $("results");
+    results.hidden = false;
+    results.classList.remove("flash");
+    void results.offsetWidth;
+    results.classList.add("flash");
+
+    renderVerdict(report);
+
+    var list = $("materials");
+    clear(list);
+    (report.materials || []).forEach(function (m) { list.appendChild(renderMaterial(m)); });
+    if (!(report.materials || []).length) { list.appendChild(el("li", "note-inline", "本次请求没有素材结论")); }
+
+    renderTimeline(state, report);
+
+    var summaryFallback = report.status === "step_limit_reached"
+      ? "（步数上限生效，模型未收尾）"
+      : "（模型没有留下总结）";
+    $("agent-summary").textContent = text(report.agent_summary, summaryFallback);
+    var model = (report.model || {}).name || "—";
+    $("footer-note").textContent = "运行 " + text(report.run_id) + " · 模型 " + model + " · " + text(report.note);
+
+    renderTrace(trace, report);
+  }
+
+  /* ---------- trace ---------- */
+  function renderTrace(trace, report) {
+    var root = $("trace");
+    clear(root);
+    if (!trace) {
+      $("trace-limits").textContent = "未运行";
+      root.appendChild(el("li", "trace-empty", "还没有决策记录"));
+      return;
+    }
+    var limits = (report && report.limits) || trace.limits || {};
+    $("trace-limits").textContent = "步数 " + text(limits.steps_used) + "/" + text(limits.max_steps) + " · 工具 " + text(limits.tool_calls);
+    (trace.steps || []).forEach(function (step) {
+      var li = el("li", "step");
+      var head = el("div", "step-head");
+      head.appendChild(el("span", "step-no", String(step.step)));
+      head.appendChild(el("span", "step-tool", text(step.action && step.action.tool)));
+      var ok = step.observation && step.observation.ok;
+      head.appendChild(el("span", "step-ok tone-" + (ok ? "pass" : "block"), ok ? "OK" : "FAIL"));
+      li.appendChild(head);
+      if (step.rationale) { li.appendChild(el("p", "step-why", step.rationale)); }
+      li.appendChild(el("p", "step-obs", text(step.observation && step.observation.summary)));
+      if (step.next_action) { li.appendChild(el("p", "step-next", step.next_action)); }
+      var args = el("details", "args");
+      args.appendChild(el("summary", null, "工具参数"));
+      args.appendChild(el("pre", null, JSON.stringify((step.action && step.action.args) || {}, null, 2)));
+      li.appendChild(args);
+      root.appendChild(li);
+    });
+  }
+
+  /* ---------- actions ---------- */
+  function setRunning(value) {
+    running = value;
+    var btn = $("run");
+    btn.disabled = value;
+    btn.firstChild.textContent = value ? "执行中…" : "运行这个场景";
+  }
+
+  function showError(message) {
+    $("empty").hidden = true;
+    var results = $("results");
+    results.hidden = true;
+    var box = document.getElementById("error-box");
+    if (!box) {
+      box = el("div", "error");
+      box.id = "error-box";
+      results.parentNode.insertBefore(box, results);
+    }
+    box.textContent = "运行失败：" + message;
+    box.hidden = false;
+  }
+
+  function hideError() {
+    var box = document.getElementById("error-box");
+    if (box) { box.hidden = true; }
+  }
+
+  function run() {
+    if (running) { return; }
+    hideError();
+    setRunning(true);
+    var offline = $("offline").checked;
+    renderEnv(offline);
+    var body = {
+      case: selected,
+      offline: offline,
+      reset: $("reset-ledger").checked,
+      max_steps: $("max-steps").value || null
+    };
+    fetchJSON("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (payload) {
+      state = payload.state;
+      renderMeta(state);
+      renderReport(payload.report, payload.trace);
+    }).catch(function (err) {
+      showError(err.message || String(err));
+    }).then(function () {
+      setRunning(false);
+    });
+  }
+
+  function boot() {
+    fetchJSON("/api/state").then(function (payload) {
+      state = payload.state;
+      renderMeta(state);
+      renderCases(state.cases || []);
+      renderTimeline(state, null);
+      select(selected);
+      return run();
+    }).catch(function (err) {
+      showError(err.message || String(err));
+    });
+
+    $("run").addEventListener("click", run);
+    $("offline").addEventListener("change", function () { renderEnv(this.checked); });
+    document.addEventListener("keydown", function (event) {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        run();
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", boot);
+})();
