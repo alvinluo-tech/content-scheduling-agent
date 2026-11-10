@@ -1,0 +1,73 @@
+{
+  "run_id": "case02-conflict",
+  "date": "2026-11-12",
+  "dates": [
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-14",
+    "2026-11-15"
+  ],
+  "status": "completed",
+  "completed": true,
+  "outcome": "failed",
+  "model": {
+    "mode": "deepseek",
+    "name": "deepseek-v4-pro"
+  },
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 3,
+    "tool_calls": 4
+  },
+  "summary": {
+    "total": 1,
+    "confirmation_rejected": 1
+  },
+  "materials": [
+    {
+      "material_id": "M01",
+      "title": "城市夜骑 30 秒混剪",
+      "requested_date": "2026-11-12",
+      "requested_time": "18:00",
+      "time_hard": true,
+      "review_status": "pass",
+      "risk_reasons": [],
+      "missing_fields": [],
+      "scheduled_date": "2026-11-12",
+      "suggested_time": "19:00",
+      "time_changed": true,
+      "date_changed": false,
+      "hard_time_preserved": false,
+      "requires_user_confirmation": false,
+      "rejected_confirmations": [
+        "C-M01-2026-11-12-1900"
+      ],
+      "pending_confirmations": [
+        {
+          "confirmation_id": "C-M01-2026-11-12-1900",
+          "question": "18:00 是硬性要求但已被占用，是否同意改到 19:00？",
+          "proposed_date": "2026-11-12",
+          "proposed_time": "19:00",
+          "status": "rejected"
+        }
+      ],
+      "draft": {
+        "draft_id": "D-M01-2026-11-12-1800",
+        "scheduled_date": "2026-11-12",
+        "scheduled_time": "19:00",
+        "status": "draft_rejected",
+        "submit_count": 1,
+        "published": false
+      },
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "confirmation_rejected"
+    }
+  ],
+  "unfinished_materials": [],
+  "published": false,
+  "agent_summary": "处理结果如下，M01 本次被阻断，未保存草稿。\n\n我做了什么：\n1. **读取素材**：M01《城市夜骑 30 秒混剪》元数据齐全（时长 30s、封面、授权 authorized=true、品类生活等），无缺失必填字段。\n2. **规则检查**：审核状态为 `pass`，无违规、无缺失，`can_draft=true`，素材本身允许保存草稿。\n3. **查询时段**：2026-11-12 18:00 **不可用**，已被 `M00` 占用；系统给出的替代时段为 19:00（推荐）、19:30、20:30。\n4. **尝试改期登记**：因 M01 为 `hard=true` 硬性时间要求，改时段必须先登记待确认项。我登记了「18:00 → 19:00」的待确认项，但系统返回该待确认项已存在且状态为 `rejected`（已拒绝），并提示用户确认前不得表述为已确认或已发布。\n\n为什么没保存草稿：\n- 18:00 被 M00 占用，不能抢占；\n- 19:00 的改期确认已被拒绝，不能擅自按 19:00 落草稿；\n- 因此 M01 未保存任何草稿。\n\n还需要你拍板的事项：\n- M01 客户指定首播 18:00，但该时段与 M00 冲突；\n- 19:00 的替代方案已被拒绝，是否改约 **19:30** 或 **20:30**？还是协调 M00 让出 18:00，或提供其他可接受的首播时间？确认后我再继续登记并保存草稿。",
+  "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
+  "trace_file": "examples/02-conflict-rejected.live.trace.json",
+  "report_md": "examples/02-conflict-rejected.live.report.md"
+}

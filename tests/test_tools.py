@@ -75,6 +75,9 @@ class ToolboxTest(unittest.TestCase):
         self.assertFalse(again["ok"])
         self.assertEqual(again["error"]["code"], "CONFIRMATION_REJECTED")
         self.assertTrue(again["error"]["recoverable"])
+        # 作废的草稿不再占位：19:00 应重新回到可用替代时段里
+        slot = self.toolbox.call("query_time_slot", {"material_id": "M01", "time": "18:00", "reason": "否决后重查替代"})
+        self.assertIn("19:00", slot["alternatives"])
 
     def test_slot_query_explains_why_a_slot_is_recommended(self) -> None:
         slot = self.toolbox.call("query_time_slot", {"material_id": "M01", "time": "18:00", "reason": "查冲突与替代"})

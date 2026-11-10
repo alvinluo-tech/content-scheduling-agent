@@ -72,7 +72,9 @@ class Store:
         return [
             {"time": draft["scheduled_time"], "material_id": draft["material_id"], "source": "draft"}
             for draft in self.drafts.values()
-            if draft["date"] == date and draft["material_id"] != exclude_material
+            if draft["date"] == date
+            and draft["material_id"] != exclude_material
+            and draft.get("status") != "draft_rejected"  # 被否决的草稿已作废，不该继续占位
         ]
 
     def upsert_draft(self, record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
