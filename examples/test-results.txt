@@ -58,6 +58,8 @@ test_stream_rejects_unknown_case_before_opening_stream (tests.test_server.Server
 test_unknown_api_is_404 (tests.test_server.ServerTestCase.test_unknown_api_is_404) ... ok
 test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_case_is_rejected) ... ok
 test_unknown_confirmation_is_rejected (tests.test_server.ServerTestCase.test_unknown_confirmation_is_rejected) ... ok
+test_a_wrong_token_is_refused_everywhere (tests.test_server.TokenServerTestCase.test_a_wrong_token_is_refused_everywhere) ... ok
+test_api_needs_the_token_while_the_page_still_opens (tests.test_server.TokenServerTestCase.test_api_needs_the_token_while_the_page_still_opens) ... ok
 test_a_confirmation_written_elsewhere_is_not_lost_by_a_later_draft (tests.test_store.LedgerConcurrencyTest.test_a_confirmation_written_elsewhere_is_not_lost_by_a_later_draft) ... ok
 test_two_instances_do_not_overwrite_each_others_drafts (tests.test_store.LedgerConcurrencyTest.test_two_instances_do_not_overwrite_each_others_drafts) ... ok
 test_waiting_on_a_held_lock_gives_up_loudly_instead_of_writing (tests.test_store.LedgerConcurrencyTest.test_waiting_on_a_held_lock_gives_up_loudly_instead_of_writing) ... ok
@@ -92,6 +94,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 85 tests in 8.108s
+Ran 87 tests in 8.649s
 
 OK

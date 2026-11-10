@@ -17,7 +17,7 @@
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件 |
 | 输入层 | `tests/test_validation.py` | 6 个示例输入全部通过、同一素材重复出现时点名两条位置、缺 `requested_time` 时说明「不会替用户猜」、越界时间与未配置的日期/频道**不**在入口拦（留给工具）、`max_steps` 非正数被拒 |
 | 账本层 | `tests/test_store.py` | 两个实例各自写不互相覆盖（旧实现会从 2 份掉到 1 份）、别处写的确认项不被后来的草稿覆盖、锁被占用时等满超时报 `LedgerBusy` 且释放后照常可用 |
-| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、`/api/custom` 与 CLI 同一套校验（重复素材 400）、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
+| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、`/api/custom` 与 CLI 同一套校验（重复素材 400）、口令开启后无 token 一律 401（页面仍可打开）、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
 
 ## 十个用例的实际结果（离线 Mock）
 
@@ -59,7 +59,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-十七张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+十九张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -74,6 +74,8 @@
 | `docs/images/web-02-conflict-rejected.png` | 人工否决后重跑 | 点「不同意这个改期」后：结论「存在失败项」、素材状态「改期被否决」；确认项 `rejected`、草稿「已否决 · 草稿作废」；第 5 步观察是 `CONFIRMATION_REJECTED`（FAIL），`published` 仍为 false |
 | `docs/images/web-02-conflict-streaming.png` | 真实模型运行中（第 3 条决策） | 右栏逐条推送（`执行中 · 已产生 3 条决策记录`，朱红呼吸点），中间上一轮结论压暗；跑完后恢复亮度并换成新结果 |
 | `docs/images/web-custom-request.png` | 左栏展开「自定义一次请求」 | 选 M01、11-12、18:00、主频道、硬性，点「用这条请求跑一次」：登记为 `custom-1` 后仍走 SSE + 同一张图，结论「待用户确认」、建议 19:00、确认项 `C-M01-2026-11-12-1900`、`已发布 false`——没有因为"人手填的"就放宽冲突判断 |
+| `docs/images/web-token-prompt.png` | 服务端开启了演示口令 | 页面能打开但没有任何数据：中间只剩「运行失败：需要演示口令」，浮层出现口令输入框；`/api/state`、`/api/stream` 都是 401——不因为你是浏览器就放行 |
+| `docs/images/web-token-unlocked.png` | 填对口令之后 | 输入框消失，10 个场景、时段带、结论与决策记录照常出现；口令存在 `sessionStorage`，同一标签页内刷新不用重填 |
 | `docs/images/web-narrow.png` | 884px 窄屏（单列） | 三栏在 ≤1000px 折成一列，场景列表、执行区、结论依次堆叠；顶栏出现「耗时 43 毫秒」，说明计时来自本轮真实运行而不是写死 |
 | `docs/images/web-report-md.png` | 结论下方的报告导出 | 结论行下出现「导出 Markdown 报告」；点它下载的就是上面那份报告（同一份 `report` + 决策记录），`已发布 否` |
 | `docs/images/web-07-multiday.png` | 多日排期 | 页面顶部「2026-11-12 起 4 天」；时段带上方出现日期切换（11-13 激活）；11-13 明细列出 09:00 M02 / 09:30 草稿 M06 / 14:00 M00 / 20:00 草稿 M07；结论「待用户确认」、`已发布 false` |
@@ -102,7 +104,10 @@
    真实排期要接业务日历，这一层现在由 `schedule.json` 的 `days` 近似。
 8. **自定义请求只活在进程内存里**：界面里登记的 `custom-N` 重启服务即消失，也不能改素材库、
    一次只提交一条请求；它证明"填的请求走同一条链路"，不证明它是产品级的请求编排入口。
-9. **账本并发只做到单文件互斥**：`Store.transaction()` 用 `<ledger>.json.lock` 把"读-改-写"整体互斥，
+9. **口令是共享密钥，不是账号体系**：`--token` 只回答"你有没有口令"，没有用户身份、没有按人分权、
+   没有审计日志；口令错了就是 401，没有失败次数限制与过期时间。它挡住的是"本机随手一敲就能清账本"，
+   不是"对外网暴露一个写接口"。
+10. **账本并发只做到单文件互斥**：`Store.transaction()` 用 `<ledger>.json.lock` 把"读-改-写"整体互斥，
    实测两个并发 CLI 运行不会丢草稿、也不会把同一时段排进两条素材；但它不是数据库事务——没有多副本、
    没有行级并发，锁粒度是整个账本，写入频繁时会让后到者排队甚至等到 `LEDGER_BUSY`。
 

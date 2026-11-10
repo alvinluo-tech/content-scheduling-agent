@@ -27,7 +27,8 @@
 1. ~~接真实 DeepSeek 跑 02/04 两条路径，把真实 trace 与 Mock 差异写进 03~~ ✅ 已完成，见 `docs/03-evaluation.md` 真实模型一节与 `examples/*.live.*`。
 2. ~~增加"确认回写"入口~~ ✅ 已做：`--approve` / `POST /api/confirm`，只有人能点，重跑直接产出 `draft_ready`。
 3. 排期从"不冲突"升级到"可解释的优先级排序"（频道负载、素材时效、时长组合）。
-4. ~~把 CLI 包一层薄 HTTP API~~ 部分完成：已加 Web 演示层（`src/server.py` + `web/`，同一张图、`.runtime` 独立账本），生产 API 还缺鉴权与并发控制。
+4. ~~把 CLI 包一层薄 HTTP API~~ 部分完成：已加 Web 演示层（`src/server.py` + `web/`，同一张图、`.runtime` 独立账本），
+   并补了可选共享口令（`--token`）与账本跨进程锁；生产 API 还缺真正的账号体系与多副本。
 5. ~~补多日占位 / 多频道~~ ✅ 已做（`days` + `requested_date`、`channels` + `requested_channel`）；~~并发保存~~ ✅ 单文件账本已加跨进程锁（见下条）。
 6. ~~运行过程要能看见~~ ✅ 已做：`GET /api/stream`（SSE）+ `TraceRecorder` 监听器，截图见 `docs/images/web-02-conflict-streaming.png`。
 7. ~~报告只能看 JSON~~ ✅ 已做：`--report-md` / `GET /api/report.md` 共用 `src/markdown.py`，逐用例产物在 `examples/*.report.md`。
@@ -114,4 +115,12 @@ M02 再查时必须自己发现并提议 13:30——M02 的占位要能读到同
 测试数一直显示"全绿"却没跑它们。教训是：不要以测试数为准，要以"这条断言真的执行过"为准
 （用 `-v` 看用例名，或临时改坏断言看它是否变红）。
 
-未完成：带鉴权的 API、账本的多副本/数据库事务（现在只有单文件互斥）。
+这一轮补的是"演示服务不设防"。原本谁都能 POST `/api/reset` 清账本、读 `/api/state` 看全部素材，
+而演示服务监听在本机端口上，等于把账本的读写权交给了本机任何进程。做法是加一个**可选**的共享口令：
+`--token` 一开，所有 `/api/` 先过一次 `hmac.compare_digest`，SSE 用 `?token=`（`EventSource`
+不支持自定义请求头），页面把口令存 `sessionStorage` 并自动补到每个请求。默认不开，所以演示与截图不受影响。
+教训有两条：一是"可选"必须真的可选——默认路径的行为、截图、测试一条都不能变；二是给元素加 `display:flex`
+之后 `hidden` 就失效了（`.token-row { display: flex }` 顶掉 UA 的 `[hidden]{display:none}`），
+口令框在解锁后还浮在结论上——补一条 `.token-row[hidden]{display:none}` 并把这条写进测试。
+
+未完成：真正的账号体系与权限分级、账本的多副本/数据库事务（现在只有单文件互斥）。

@@ -7,7 +7,9 @@ UI 只负责三件事：选场景、展示报告、展示决策记录。
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
+import os
 import queue
 import threading
 import traceback
@@ -27,6 +29,9 @@ DATA_DIR = REPO_ROOT / "data"
 EXAMPLES_DIR = REPO_ROOT / "examples"
 RUNTIME_DIR = REPO_ROOT / ".runtime"
 LEDGER_PATH = RUNTIME_DIR / "ledger.json"
+# 演示口令：留空表示不校验（本地演示默认）。填了之后所有 /api/* 都要带 X-Demo-Token 或 ?token=。
+# 这不是账号体系，只是把"本机任何进程都能读改账本"降级成"要拿到口令"。
+DEMO_TOKEN: str = ""
 
 CASE_META: list[dict[str, Any]] = [
     {
@@ -285,6 +290,21 @@ class Handler(BaseHTTPRequestHandler):
         ctype = CONTENT_TYPES.get(target.suffix.lower(), "application/octet-stream")
         self._send(200, target.read_bytes(), ctype)
 
+    def _token_ok(self) -> bool:
+        if not DEMO_TOKEN:
+            return True
+        given = self.headers.get("X-Demo-Token") or ""
+        if not given:
+            given = dict(parse_qsl(urlparse(self.path).query)).get("token") or ""
+        return hmac.compare_digest(given, DEMO_TOKEN)
+
+    def _require_token(self) -> bool:
+        """返回 True 表示这次请求可以继续；否则已经回好 401。"""
+        if self._token_ok():
+            return True
+        self._json(401, {"status": "error", "error": "需要演示口令", "auth_required": True})
+        return False
+
     def _sse(self, event: str, payload: dict[str, Any]) -> None:
         chunk = "event: " + event + "\ndata: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
         self.wfile.write(chunk.encode("utf-8"))
@@ -345,6 +365,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path.startswith("/api/") and not self._require_token():
+            return
         if path == "/api/stream":
             self.stream_case(dict(parse_qsl(urlparse(self.path).query)))
             return
@@ -368,6 +390,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path.startswith("/api/") and not self._require_token():
+            return
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length else b"{}"
         try:
@@ -433,6 +457,8 @@ def serve(host: str, port: int) -> None:
     httpd = ThreadingHTTPServer((host, port), Handler)
     print("排期工作台已启动：http://" + host + ":" + str(port) + "   (Ctrl+C 退出)")
     print("草稿账本：" + str(LEDGER_PATH.relative_to(REPO_ROOT)) + "（与 data/drafts.json 隔离，演示不会污染归档产物）")
+    if DEMO_TOKEN:
+        print("已开启演示口令：/api/* 需要 X-Demo-Token 头或 ?token= 参数（口令本身不打印）")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -445,8 +471,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="排期工作台（Web 演示层，只保存草稿）")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7860)
+    parser.add_argument(
+        "--token",
+        default="",
+        help="开启演示口令：/api/* 需要 X-Demo-Token 头或 ?token= 参数；也可以用环境变量 DEMO_TOKEN",
+    )
     args = parser.parse_args(argv)
     load_env()
+    global DEMO_TOKEN
+    DEMO_TOKEN = args.token or os.environ.get("DEMO_TOKEN", "")
     serve(args.host, args.port)
     return 0
 

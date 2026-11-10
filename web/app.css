@@ -152,6 +152,27 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 .primary:disabled { cursor: progress; background: var(--ink-3); border-color: var(--ink-3); }
 .primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .kbd { font: 9.5px var(--mono); letter-spacing: 0.08em; opacity: 0.55; }
+
+/* 演示口令：只在服务端用 --token 启动时露出，浮在页面右上角，不挤顶栏 */
+.token-row {
+  position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 10px; font-size: 11px; color: var(--ink-2);
+  background: var(--paper); border: 1px solid var(--accent); border-radius: 2px;
+  box-shadow: 0 6px 20px rgba(38, 34, 27, 0.12);
+}
+.token-row[hidden] { display: none; }
+.token-row label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.token-row input {
+  width: 132px; padding: 3px 6px; font: 11px var(--mono);
+  background: var(--paper); border: 1px solid var(--rule-strong); color: var(--ink);
+}
+.token-row button {
+  padding: 3px 8px; font: 11px var(--sans); color: var(--ink-2);
+  background: none; border: 1px solid var(--rule-strong); border-radius: 2px; cursor: pointer;
+}
+.token-row button:hover { color: var(--accent); border-color: var(--accent); }
+.token-row input:focus-visible, .token-row button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .fine { font-size: 10.5px; color: var(--ink-3); line-height: 1.5; }
 
 /* ---------- 自定义请求 ---------- */

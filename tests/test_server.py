@@ -79,10 +79,15 @@ class ServerTestCase(unittest.TestCase):
         html = page.decode("utf-8")
         self.assertIn('aria-live="polite"', html)
         self.assertIn('id="meta-duration"', html)
+        self.assertIn('id="token-row"', html)
         _, script = self.get("/app.js")
         js = script.decode("utf-8")
         self.assertIn("ArrowDown", js)
         self.assertIn("tabIndex", js)
+        self.assertIn("withToken", js)
+        _, css = self.get("/app.css")
+        # .token-row 用 display:flex，会把 [hidden] 的默认 display:none 顶掉，必须显式写一条
+        self.assertIn(".token-row[hidden]", css.decode("utf-8"))
 
     def test_static_css_is_served_with_right_content_type(self) -> None:
         status, _ = self.get("/app.css")
@@ -311,3 +316,54 @@ class ServerTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TokenServerTestCase(unittest.TestCase):
+    """服务端用 --token 启动后，/api/* 必须带口令；页面本身仍可打开（口令输入框就在页面上）。"""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.original_ledger = server.LEDGER_PATH
+        cls.original_token = server.DEMO_TOKEN
+        server.LEDGER_PATH = Path(cls.tmp.name) / "ledger.json"
+        server.DEMO_TOKEN = "test-token"
+        cls.httpd = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        cls.base = "http://127.0.0.1:%d" % cls.httpd.server_address[1]
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join(timeout=5)
+        server.LEDGER_PATH = cls.original_ledger
+        server.DEMO_TOKEN = cls.original_token
+        cls.tmp.cleanup()
+
+    def request(self, path: str, headers=None):
+        try:
+            with urlopen(Request(self.base + path, headers=headers or {}), timeout=30) as resp:
+                return resp.status, resp.read()
+        except HTTPError as exc:
+            return exc.code, exc.read()
+
+    def test_api_needs_the_token_while_the_page_still_opens(self) -> None:
+        status, body = self.request("/api/state")
+        self.assertEqual(status, 401)
+        self.assertTrue(json.loads(body.decode("utf-8"))["auth_required"])
+        self.assertEqual(self.request("/api/state", {"X-Demo-Token": "test-token"})[0], 200)
+        self.assertEqual(self.request("/api/state?token=test-token")[0], 200)
+        status, page = self.request("/")
+        self.assertEqual(status, 200)
+        self.assertIn(b"token-row", page)
+
+    def test_a_wrong_token_is_refused_everywhere(self) -> None:
+        self.assertEqual(self.request("/api/state?token=nope")[0], 401)
+        self.assertEqual(self.request("/api/stream?case=02-conflict&token=nope")[0], 401)
+        request = Request(self.base + "/api/reset", data=b"{}", headers={"Content-Type": "application/json"})
+        try:
+            urlopen(request, timeout=30)
+            self.fail("没有口令的写请求不应该成功")
+        except HTTPError as exc:
+            self.assertEqual(exc.code, 401)

@@ -91,9 +91,33 @@
     return el("span", "chip tone-" + (tone || "muted"), label);
   }
 
+  /* 演示口令（可选）：服务端用 --token 开启后，所有 /api/* 都要带 token。
+     EventSource 不能自定义请求头，所以统一走 ?token= 查询参数，口令存在 sessionStorage 里。 */
+  var TOKEN_KEY = "scheduling.desk.token";
+
+  function token() {
+    try { return window.sessionStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
+  }
+
+  function saveToken(value) {
+    try { window.sessionStorage.setItem(TOKEN_KEY, value); } catch (e) { /* 隐私模式下写不了，只影响本次会话 */ }
+  }
+
+  function withToken(url) {
+    var value = token();
+    if (!value) { return url; }
+    return url + (url.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(value);
+  }
+
+  function askForToken() {
+    $("token-row").hidden = false;
+    $("token").focus();
+  }
+
   function fetchJSON(url, options) {
-    return fetch(url, options).then(function (resp) {
+    return fetch(withToken(url), options).then(function (resp) {
       return resp.json().then(function (body) {
+        if (resp.status === 401 || body.auth_required) { askForToken(); }
         if (!resp.ok || body.status === "error") {
           throw new Error(body.error || ("HTTP " + resp.status));
         }
@@ -663,7 +687,7 @@
     $("trace-limits").classList.add("live");
     $("trace-limits").textContent = "等待模型第一步…";
 
-    var source = new EventSource("/api/stream?" + params.toString());
+    var source = new EventSource(withToken("/api/stream?" + params.toString()));
     stream = source;
     source.addEventListener("trace", function (event) {
       var payload = JSON.parse(event.data);
@@ -773,7 +797,33 @@
     });
   }
 
+  var bound = false;
+
+  function bindChrome() {
+    if (bound) { return; }
+    bound = true;
+    $("run").addEventListener("click", run);
+    $("custom-run").addEventListener("click", function () { runCustom(this); });
+    $("offline").addEventListener("change", function () { renderEnv(this.checked); });
+    $("token-save").addEventListener("click", function () {
+      saveToken($("token").value.trim());
+      $("token-row").hidden = true;
+      hideError();
+      boot();
+    });
+    $("token").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") { event.preventDefault(); $("token-save").click(); }
+    });
+    document.addEventListener("keydown", function (event) {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        run();
+      }
+    });
+  }
+
   function boot() {
+    bindChrome();
     fetchJSON("/api/state").then(function (payload) {
       state = payload.state;
       renderMeta(state);
@@ -784,16 +834,6 @@
       return run();
     }).catch(function (err) {
       showError(err.message || String(err));
-    });
-
-    $("run").addEventListener("click", run);
-    $("custom-run").addEventListener("click", function () { runCustom(this); });
-    $("offline").addEventListener("change", function () { renderEnv(this.checked); });
-    document.addEventListener("keydown", function (event) {
-      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-        event.preventDefault();
-        run();
-      }
     });
   }
 
