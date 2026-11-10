@@ -43,6 +43,9 @@
 2. **硬性时间需确认**：`time_hard=true` 且时间或日期变了（`time_changed or date_changed`）时，若没有 pending/approved 的确认记录，直接拒绝保存。
    确认只能由**人**给出：`--approve C-...`（CLI）或 `POST /api/confirm`（Web），模型工具集里没有审批动作；
    `approved` 之后重跑才会落到 `draft_ready`，没点头之前那份草稿始终是 `draft_pending_confirmation`。
+   人也可以否决（`--reject C-...` / `POST /api/reject`）：该方案连同那份待确认草稿一起标为
+   `rejected` / `draft_rejected`，之后 `save_draft` 对同一替代时段直接返回 `CONFIRMATION_REJECTED`——
+   否决不是一句提示，而是账本里一条谁都绕不过去的记录。
 3. **审核未过不许排**：`can_draft=false`（缺信息或命中阻断规则）时 `save_draft` 一律 `MATERIAL_NOT_READY`。
 
 提示词里同样写了这三条，但**提示词只是提醒，护栏在代码里**——模型说错话不会变成错数据。

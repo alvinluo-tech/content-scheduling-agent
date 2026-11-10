@@ -55,7 +55,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-十一张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+十二张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -65,6 +65,7 @@
 | `docs/images/web-06-step-limit.png` | 步数上限 | 结论「步数上限中断」；`步数 3/3`；M02「未完成」、M05「未处理」，模型自述写明未收尾 |
 | `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
 | `docs/images/web-02-conflict-approved.png` | 人工确认后重跑 | 点「记为用户已确认」后确认项变 `approved`、结论变「已排期 · 仅草稿」、`requires_user_confirmation=false`、`published` 仍为 false |
+| `docs/images/web-02-conflict-rejected.png` | 人工否决后重跑 | 点「不同意这个改期」后：结论「存在失败项」、素材状态「改期被否决」；确认项 `rejected`、草稿「已否决 · 草稿作废」；第 5 步观察是 `CONFIRMATION_REJECTED`（FAIL），`published` 仍为 false |
 | `docs/images/web-02-conflict-streaming.png` | 真实模型运行中（第 3 条决策） | 右栏逐条推送（`执行中 · 已产生 3 条决策记录`，朱红呼吸点），中间上一轮结论压暗；跑完后恢复亮度并换成新结果 |
 | `docs/images/web-narrow.png` | 884px 窄屏（单列） | 三栏在 ≤1000px 折成一列，场景列表、执行区、结论依次堆叠；顶栏出现「耗时 43 毫秒」，说明计时来自本轮真实运行而不是写死 |
 | `docs/images/web-report-md.png` | 结论下方的报告导出 | 结论行下出现「导出 Markdown 报告」；点它下载的就是上面那份报告（同一份 `report` + 决策记录），`已发布 否` |
@@ -80,7 +81,10 @@
 3. **排期不是最优化**：只保证不冲突 + 尊重用户要求，不做频道/流量/时长组合优化。
 4. **单频道**：多日已支持（`schedule.json` 的 `days`），但仍只有 `channel=main` 一个频道维度；真正的多渠道排期需要把频道加进占位键与工具入参。
 5. ~~确认无回写通道~~ 已补：人可通过 `--approve C-...` 或 `POST /api/confirm` 把 pending 改成 approved，
-   重跑即落 `draft_ready`（接口测试 `test_human_approval_turns_pending_draft_into_ready`）。仍是单人本地演示，没有账号与审批留痕。
+   重跑即落 `draft_ready`（接口测试 `test_human_approval_turns_pending_draft_into_ready`）；
+   `--reject C-...` / `POST /api/reject` 把同一方案连同草稿作废，`save_draft` 之后返回
+   `CONFIRMATION_REJECTED`（`test_human_rejection_voids_the_draft_and_stops_the_same_plan`）。
+   仍是单人本地演示，没有账号、没有双人复核与审批留痕。
 6. **步数上限是硬截断**：达到上限的素材保持 `unresolved`/`not_processed`，不做部分保存的补偿逻辑。
 7. **顺延只到"后面配置过的日期"**：`next_available` 不会凭空造日期，也不考虑跨日的节假日/流量策略；
    真实排期要接业务日历，这一层现在由 `schedule.json` 的 `days` 近似。

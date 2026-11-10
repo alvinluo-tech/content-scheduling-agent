@@ -44,6 +44,11 @@ cp .env.example .env         # 填入 DEEPSEEK_API_KEY=sk-...
 # 02 跑完会打印/写出 C-M01-2026-11-12-1900；人点头后重跑，草稿才变成 draft_ready
 .venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline \
   --approve C-M01-2026-11-12-1900
+
+# 也可以否决：该改期方案连同那份待确认草稿一起作废，重跑后 save_draft 会被
+# CONFIRMATION_REJECTED 挡住，不会绕过去再存一遍
+.venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline \
+  --reject C-M01-2026-11-12-1900
 ```
 
 模型 id 不是猜的：`LLM_MODEL` 的值取自 `curl https://api.deepseek.com/models`（Bearer 密钥）实测返回的
@@ -77,7 +82,7 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 `web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）、
 `web-02-conflict-streaming.png`（真实模型运行中的一帧：右栏逐条推送，中间上一轮结论压暗）、
 `web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、`web-08-day-overflow.png`（当天排满：11-14 整日有排期，改期到 11-15 09:30 待确认）、
-`web-report-md.png`（结论下方多出「导出 Markdown 报告」）、`web-narrow.png`（884px 窄屏：单列堆叠，顶栏显示本轮耗时）。
+`web-02-conflict-rejected.png`（人点了「不同意这个改期」之后：结论变「存在失败项」、草稿标为「已否决 · 草稿作废」）、`web-report-md.png`（结论下方多出「导出 Markdown 报告」）、`web-narrow.png`（884px 窄屏：单列堆叠，顶栏显示本轮耗时）。
 键盘操作：`↑`/`↓`（或 `←`/`→`）在场景间移动、`Ctrl/⌘ + Enter` 运行，焦点有可见描边。
 
 ## 评审入口（按题面验收点）
@@ -103,7 +108,7 @@ src/        store / policy / tools / models / graph / trace / report / markdown 
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   8 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      63 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、替代时段排序、Markdown 报告、HTTP 接口 / SSE 推送、键盘与读屏钩子）
+tests/      65 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、替代时段排序、Markdown 报告、HTTP 接口 / SSE 推送、键盘与读屏钩子）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```
@@ -113,4 +118,5 @@ docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + image
 - **只保存草稿**：工具集里没有发布工具，报告里 `published` 恒为 `false`（结构上不可能越权发布）。
 - 草稿账本默认 `data/drafts.json`，可用 `--ledger` 指向别处；重跑前可用 `scripts/run_examples.py` 自动重置。
 - 数据全部为合成数据，无真实用户/素材信息，无真实密钥入库。
+- 改期只能由人拍板：`--approve` / `--reject`（或 `/api/confirm` / `/api/reject`）；否决后同一方案会被 `CONFIRMATION_REJECTED` 挡住。
 - 多日排期只覆盖 `schedule.json` 里配置过的日期；频道的维度仍只有一个（`channel=main`）。
