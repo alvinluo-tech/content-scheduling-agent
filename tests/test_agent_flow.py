@@ -198,3 +198,24 @@ class AgentFlowTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_short_channel_conflict_stays_on_its_own_channel(self) -> None:
+        """短视频频道 12:00 被 M00 占用、主频道同一时刻是空的：不许借道主频道，也不许把冲突说成空闲。"""
+        report = run_example("09-channel", self.ledger)
+        self.assertEqual(report["outcome"], "pending_confirmation")
+        self.assertEqual(report["channels"], ["main", "shorts"])
+        blocked, free = report["materials"]
+        self.assertEqual(blocked["material_id"], "M02")
+        self.assertEqual(blocked["channel"], "shorts")
+        self.assertEqual(blocked["suggested_time"], "12:30")
+        self.assertEqual(blocked["draft"]["draft_id"], "D-M02-2026-11-12-1200-shorts")
+        self.assertEqual(blocked["draft"]["status"], "draft_pending_confirmation")
+        self.assertEqual(
+            [item["confirmation_id"] for item in blocked["pending_confirmations"]],
+            ["C-M02-2026-11-12-1230-shorts"],
+        )
+        self.assertEqual(free["material_id"], "M06")
+        self.assertEqual(free["result_status"], "scheduled_draft")
+        self.assertTrue(all(m["channel"] == "shorts" for m in report["materials"]))
+        self.assertFalse(report["published"])
+

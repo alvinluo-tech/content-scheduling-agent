@@ -54,9 +54,11 @@ def _material_status(
 
 def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: TraceRecorder, limits: dict[str, Any]) -> dict[str, Any]:
     date = store.schedule_date()
+    default_channel = store.default_channel()
     rows: list[dict[str, Any]] = []
     for request in run.get("requests", []):
         material_id = request["material_id"]
+        channel = request.get("requested_channel") or default_channel
         requested_date = request.get("requested_date") or date
         material = store.material(material_id)
         touched = any((call.get("args") or {}).get("material_id") == material_id for call in toolbox.calls)
@@ -64,6 +66,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
             rows.append(
                 {
                     "material_id": material_id,
+                    "channel": channel,
                     "requested_date": requested_date,
                     "requested_time": request["requested_time"],
                     "time_hard": bool(request.get("time_hard")),
@@ -82,9 +85,9 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
             )
             continue
         review = evaluate_rules(material, store.rules_doc)
-        draft = store.draft(requested_date, material_id, request["requested_time"])
+        draft = store.draft(requested_date, material_id, request["requested_time"], channel)
         confirmations = [
-            c for c in store.confirmations_for(requested_date, material_id, request["requested_time"])
+            c for c in store.confirmations_for(requested_date, material_id, request["requested_time"], channel)
         ]
         date_changed = bool((draft or {}).get("date_changed"))
         # 工具查过哪些替代时段：人改选时得有据可依，不用自己瞎填时间。
@@ -101,6 +104,8 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
             {
                 "material_id": material_id,
                 "title": material.get("title"),
+                "channel": channel,
+                "channel_label": store.channel_label(channel),
                 "requested_date": requested_date,
                 "requested_time": request["requested_time"],
                 "time_hard": bool(request.get("time_hard")),
@@ -129,6 +134,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                 "slot_options": slot_options,
                 "draft": None if draft is None else {
                     "draft_id": draft["draft_id"],
+                    "channel": draft.get("channel", default_channel),
                     "scheduled_date": draft["date"],
                     "scheduled_time": draft["scheduled_time"],
                     "status": draft["status"],
@@ -151,6 +157,8 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
     return {
         "run_id": run.get("run_id", "run"),
         "date": date,
+        "channel": default_channel,
+        "channels": store.channels(),
         "dates": store.available_dates(),
         "status": trace.terminal,
         "completed": completed,

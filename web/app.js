@@ -55,6 +55,7 @@
   var state = null;
   var lastReport = null;
   var activeDate = null;
+  var activeChannel = null;
   var running = false;
   var stream = null;
   var finished = false;
@@ -186,8 +187,61 @@
     return slots;
   }
 
-  function resolveDay(data, report) {
-    var dates = (data.dates && data.dates.length) ? data.dates : [data.date];
+  function channelList(data) {
+    return (data.channels && data.channels.length) ? data.channels : [{ name: data.channel || "main", label: data.channel || "main", dates: data.dates || [] }];
+  }
+
+  function resolveChannel(data, report) {
+    var list = channelList(data);
+    var names = list.map(function (c) { return c.name; });
+    if (names.indexOf(activeChannel) >= 0) { return activeChannel; }
+    var wanted = null;
+    (report && report.materials || []).forEach(function (m) {
+      if (!wanted && m.channel && m.channel !== (data.channel || "main") && names.indexOf(m.channel) >= 0) { wanted = m.channel; }
+    });
+    activeChannel = wanted || data.channel || names[0];
+    return activeChannel;
+  }
+
+  function channelLabel(data, channel) {
+    var list = channelList(data);
+    for (var i = 0; i < list.length; i += 1) {
+      if (list[i].name === channel) { return list[i].label || list[i].name; }
+    }
+    return channel;
+  }
+
+  function channelDates(data, channel) {
+    var list = channelList(data);
+    for (var i = 0; i < list.length; i += 1) {
+      if (list[i].name === channel && list[i].dates && list[i].dates.length) { return list[i].dates; }
+    }
+    return (data.dates && data.dates.length) ? data.dates : [data.date];
+  }
+
+  function renderChannelTabs(data) {
+    var box = $("channel-tabs");
+    if (!box) { return; }
+    clear(box);
+    var list = channelList(data);
+    if (list.length < 2) { box.hidden = true; return; }
+    box.hidden = false;
+    list.forEach(function (item) {
+      var btn = el("button", "channel-tab", item.label || item.name);
+      btn.type = "button";
+      btn.dataset.channel = item.name;
+      btn.setAttribute("aria-pressed", item.name === activeChannel ? "true" : "false");
+      btn.addEventListener("click", function () {
+        activeChannel = item.name;
+        activeDate = null;
+        if (state) { renderTimeline(state, lastReport); }
+      });
+      box.appendChild(btn);
+    });
+  }
+
+  function resolveDay(data, report, dates) {
+    dates = (dates && dates.length) ? dates : ((data.dates && data.dates.length) ? data.dates : [data.date]);
     var target = activeDate;
     if (dates.indexOf(target) < 0) {
       var moved = null;
@@ -233,22 +287,27 @@
     clear(scale);
     clear(ledger);
     var hours = data.hours || {};
-    var picked = resolveDay(data, report);
+    var channel = resolveChannel(data, report);
+    renderChannelTabs(data);
+    var picked = resolveDay(data, report, channelDates(data, channel));
     var day = picked.day;
     renderDayTabs(picked.dates);
-    $("timeline-hint").textContent = day + " · " + text(hours.start) + "–" + text(hours.end) + " · " + (hours.granularity_min || 30) + " 分钟一格";
+    var label = channelLabel(data, channel);
+    $("timeline-hint").textContent = label + " · " + day + " · " + text(hours.start) + "–" + text(hours.end) + " · " + (hours.granularity_min || 30) + " 分钟一格";
 
     var slots = buildSlots(data);
     var cells = {};
     slots.forEach(function (slot) { cells[slot.time] = { slot: slot, booked: null, suggested: null, drafted: null }; });
 
-    var daySlots = (data.days && data.days[day]) || (day === data.date ? data.slots : []) || [];
+    var byChannel = (data.channel_days && data.channel_days[channel]) || {};
+    var daySlots = byChannel[day] || (day === data.date && channel === (data.channel || "main") ? data.slots : []) || [];
     daySlots.forEach(function (item) {
       if (cells[item.time]) { cells[item.time].booked = item.material_id; }
     });
     var drafts = data.drafts || {};
     Object.keys(drafts).forEach(function (key) {
       var rec = drafts[key] || {};
+      if ((rec.channel || (data.channel || "main")) !== channel) { return; }
       if (rec.date === day && rec.scheduled_time && cells[rec.scheduled_time]) {
         cells[rec.scheduled_time].drafted = rec.draft_id || rec.material_id;
       }
@@ -256,7 +315,8 @@
     var materials = (report && report.materials) || [];
     materials.forEach(function (m) {
       var mday = m.scheduled_date || m.requested_date;
-      if (m.suggested_time && mday === day && cells[m.suggested_time]) { cells[m.suggested_time].suggested = m.material_id; }
+      var mchannel = m.channel || (data.channel || "main");
+      if (m.suggested_time && mchannel === channel && mday === day && cells[m.suggested_time]) { cells[m.suggested_time].suggested = m.material_id; }
     });
 
     slots.forEach(function (slot) {
@@ -349,6 +409,9 @@
     var left = el("div", "m-body");
     var head = el("div", "m-head");
     head.appendChild(el("span", "m-id", text(m.material_id)));
+    if (m.channel && m.channel !== (state && state.channel || "main")) {
+      head.appendChild(el("span", "m-channel", text(m.channel_label || m.channel)));
+    }
     head.appendChild(chip(status.label, status.tone));
     left.appendChild(head);
     left.appendChild(el("h3", "m-title", text(m.title)));
@@ -564,6 +627,7 @@
     closeStream();
     finished = false;
     activeDate = null;
+    activeChannel = null;
     setRunning(true);
     var offline = $("offline").checked;
     renderEnv(offline);

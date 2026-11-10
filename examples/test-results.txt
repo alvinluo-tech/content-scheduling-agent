@@ -50,6 +50,9 @@ test_stream_rejects_unknown_case_before_opening_stream (tests.test_server.Server
 test_unknown_api_is_404 (tests.test_server.ServerTestCase.test_unknown_api_is_404) ... ok
 test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_case_is_rejected) ... ok
 test_unknown_confirmation_is_rejected (tests.test_server.ServerTestCase.test_unknown_confirmation_is_rejected) ... ok
+test_same_material_in_two_channels_creates_two_drafts (tests.test_tools.ChannelToolboxTest.test_same_material_in_two_channels_creates_two_drafts) ... ok
+test_slot_lookup_is_scoped_to_the_requested_channel (tests.test_tools.ChannelToolboxTest.test_slot_lookup_is_scoped_to_the_requested_channel) ... ok
+test_unknown_channel_is_refused_without_guessing (tests.test_tools.ChannelToolboxTest.test_unknown_channel_is_refused_without_guessing) ... ok
 test_cross_day_change_needs_confirmation_and_records_both_days (tests.test_tools.MultiDayToolboxTest.test_cross_day_change_needs_confirmation_and_records_both_days) ... ok
 test_full_day_falls_through_to_the_next_configured_day (tests.test_tools.MultiDayToolboxTest.test_full_day_falls_through_to_the_next_configured_day) ... ok
 test_next_day_hint_disappears_when_the_same_day_still_has_room (tests.test_tools.MultiDayToolboxTest.test_next_day_hint_disappears_when_the_same_day_still_has_room) ... ok
@@ -73,6 +76,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 68 tests in 6.745s
+Ran 71 tests in 7.001s
 
 OK

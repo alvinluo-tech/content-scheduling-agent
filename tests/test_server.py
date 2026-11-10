@@ -61,7 +61,12 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual([slot["time"] for slot in state["days"]["2026-11-13"]], ["09:00", "14:00"])
         self.assertEqual(state["hours"]["start"], "09:00")
         self.assertEqual(len(state["rules"]), 5)
-        self.assertEqual(len(state["cases"]), 8)
+        self.assertEqual(len(state["cases"]), 9)
+        self.assertEqual([c["name"] for c in state["channels"]], ["main", "shorts"])
+        self.assertEqual(state["channel_days"]["shorts"]["2026-11-12"], [
+            {"time": "12:00", "material_id": "M00"},
+            {"time": "18:00", "material_id": "M05"},
+        ])
         self.assertEqual(state["drafts"], {})
 
     def test_index_is_served(self) -> None:

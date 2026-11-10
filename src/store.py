@@ -24,8 +24,9 @@ def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
             os.unlink(tmp)
 
 
-def draft_key(date: str, material_id: str, requested_time: str) -> str:
-    return f"{date}|{material_id}|{requested_time}"
+def draft_key(channel: str, date: str, material_id: str, requested_time: str) -> str:
+    """频道是身份的一部分：同一素材在短片频道和主频道是两份不同的草稿。"""
+    return f"{channel}|{date}|{material_id}|{requested_time}"
 
 
 class Store:
@@ -56,36 +57,80 @@ class Store:
     def schedule_date(self) -> str:
         return self.schedule_doc["date"]
 
-    def available_dates(self) -> list[str]:
-        """可排日期来自 schedule.json 的 days（默认日期也必须在其中）。"""
-        return sorted(self.schedule_doc.get("days", {}).keys())
+    def default_channel(self) -> str:
+        return self.schedule_doc.get("channel", "main")
 
-    def occupied_slots(self, date: str | None = None) -> list[dict[str, Any]]:
+    def channels(self) -> list[str]:
+        """主频道永远在第一位，其余按名字排序。"""
+        extra = sorted(self.schedule_doc.get("channels", {}).keys())
+        return [self.default_channel()] + [name for name in extra if name != self.default_channel()]
+
+    def channel_label(self, channel: str | None = None) -> str:
+        name = channel or self.default_channel()
+        if name == self.default_channel():
+            return self.schedule_doc.get("channel_label", name)
+        return self.schedule_doc.get("channels", {}).get(name, {}).get("label", name)
+
+    def channel_catalog(self) -> list[dict[str, Any]]:
+        return [
+            {"name": name, "label": self.channel_label(name), "default": name == self.default_channel()}
+            for name in self.channels()
+        ]
+
+    def has_channel(self, channel: str) -> bool:
+        return channel in self.channels()
+
+    def channel_days(self, channel: str | None = None) -> dict[str, list[dict[str, Any]]]:
+        name = channel or self.default_channel()
+        if name == self.default_channel():
+            return self.schedule_doc.get("days", {})
+        return self.schedule_doc.get("channels", {}).get(name, {}).get("days", {})
+
+    def available_dates(self, channel: str | None = None) -> list[str]:
+        """可排日期来自该频道的 days（主频道的默认日期必须在其中）。"""
+        return sorted(self.channel_days(channel).keys())
+
+    def occupied_slots(self, date: str | None = None, channel: str | None = None) -> list[dict[str, Any]]:
         target = date or self.schedule_date()
-        return list(self.schedule_doc.get("days", {}).get(target, []))
+        return list(self.channel_days(channel).get(target, []))
 
-    def draft(self, date: str, material_id: str, requested_time: str) -> dict[str, Any] | None:
-        return self.drafts.get(draft_key(date, material_id, requested_time))
+    def draft(
+        self, date: str, material_id: str, requested_time: str, channel: str | None = None
+    ) -> dict[str, Any] | None:
+        return self.drafts.get(draft_key(self._channel(channel), date, material_id, requested_time))
 
-    def drafted_slots(self, date: str, exclude_material: str | None = None) -> list[dict[str, Any]]:
+    def _channel(self, channel: str | None) -> str:
+        return channel or self.default_channel()
+
+    def drafted_slots(
+        self, date: str, exclude_material: str | None = None, channel: str | None = None
+    ) -> list[dict[str, Any]]:
         """草稿同样占位，避免同一时段排进两条素材；素材自己的草稿不算冲突（用于幂等重提）。"""
+        name = self._channel(channel)
         return [
             {"time": draft["scheduled_time"], "material_id": draft["material_id"], "source": "draft"}
             for draft in self.drafts.values()
             if draft["date"] == date
+            and draft.get("channel", self.default_channel()) == name
             and draft["material_id"] != exclude_material
             and draft.get("status") != "draft_rejected"  # 被否决的草稿已作废，不该继续占位
         ]
 
     def upsert_draft(self, record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         """去重键用“用户要求”而不是“建议结果”：换了替代时段重提仍是同一份草稿。"""
-        key = draft_key(record["requested_date"], record["material_id"], record["requested_time"])
+        key = draft_key(
+            self._channel(record.get("channel")),
+            record["requested_date"],
+            record["material_id"],
+            record["requested_time"],
+        )
         existing = self.drafts.get(key)
         if existing is None:
             self.drafts[key] = record
             self.commit()
             return record, True
         existing["date"] = record["date"]
+        existing["channel"] = record.get("channel", self.default_channel())
         existing["scheduled_time"] = record["scheduled_time"]
         existing["status"] = record["status"]
         existing["time_changed"] = record["time_changed"]
@@ -128,6 +173,7 @@ class Store:
         for draft in self.drafts.values():
             if (
                 draft["material_id"] == record["material_id"]
+                and draft.get("channel", self.default_channel()) == record.get("channel", self.default_channel())
                 and draft["status"] == "draft_pending_confirmation"
                 and draft["date"] == record.get("proposed_date", record.get("date"))
                 and draft["scheduled_time"] == record["proposed_time"]
@@ -162,6 +208,7 @@ class Store:
             counter = {
                 "confirmation_id": counter_id,
                 "date": counter_date,
+                "channel": record.get("channel", self.default_channel()),
                 "requested_date": record.get("requested_date", record.get("date")),
                 "material_id": record["material_id"],
                 "requested_time": record["requested_time"],
@@ -181,11 +228,15 @@ class Store:
         self.commit()
         return counter
 
-    def confirmations_for(self, requested_date: str, material_id: str, requested_time: str) -> list[dict[str, Any]]:
-        """按“用户原本要求的那一天 + 那个时间”找确认项；提议日期在 proposed_date 上。"""
+    def confirmations_for(
+        self, requested_date: str, material_id: str, requested_time: str, channel: str | None = None
+    ) -> list[dict[str, Any]]:
+        """按“频道 + 用户原本要求的那一天 + 那个时间”找确认项；提议日期在 proposed_date 上。"""
+        name = self._channel(channel)
         return [
             c for c in self.confirmations.values()
             if c.get("requested_date", c.get("date")) == requested_date
+            and c.get("channel", self.default_channel()) == name
             and c["material_id"] == material_id
             and c["requested_time"] == requested_time
         ]

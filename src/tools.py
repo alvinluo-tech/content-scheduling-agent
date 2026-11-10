@@ -17,6 +17,11 @@ DATE_PROP = {
     "description": "YYYY-MM-DD；省略则用该素材要求的日期。只能填 schedule.json 里配置过的日期",
 }
 
+CHANNEL_PROP = {
+    "type": "string",
+    "description": "发布频道，例如 main / shorts；省略则用该素材要求的频道。只能填 schedule.json 里配置过的频道",
+}
+
 TOOL_SPECS: list[dict[str, Any]] = [
     {
         "type": "function",
@@ -46,13 +51,14 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "query_time_slot",
-            "description": "查询某天某个时间点是否可排：返回是否被占用、被谁占用，以及该时间点之后最近的 3 个可用时段。营业时段 09:00-21:00，30 分钟粒度；已保存的草稿同样占位。",
+            "description": "查询某频道某天某个时间点是否可排：返回是否被占用、被谁占用，以及该时间点之后最近的 3 个可用时段。营业时段 09:00-21:00，30 分钟粒度；已保存的草稿同样占位；频道之间互不影响。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "material_id": {"type": "string", "description": "为哪项素材查询时段（用于归因到该素材）"},
                     "time": {"type": "string", "description": "HH:MM，例如 18:00"},
                     "date": DATE_PROP,
+                    "channel": CHANNEL_PROP,
                     "reason": REASON_PROP,
                 },
                 "required": ["material_id", "time", "reason"],
@@ -70,6 +76,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
                     "material_id": {"type": "string", "description": "素材 ID"},
                     "proposed_time": {"type": "string", "description": "建议的替代时段 HH:MM"},
                     "date": DATE_PROP,
+                    "channel": CHANNEL_PROP,
                     "question": {"type": "string", "description": "要用户拍板的问题，一句话"},
                     "reason": REASON_PROP,
                 },
@@ -81,13 +88,14 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "save_draft",
-            "description": "只保存排期草稿，不发布。相同请求（同素材同时段要求）重复保存只会产生一份草稿；把硬性要求的时间改掉前必须先 request_confirmation；审核未通过的素材不允许保存。返回 published 恒为 false。",
+            "description": "只保存排期草稿，不发布。相同请求（同频道同素材同时段要求）重复保存只会产生一份草稿；把硬性要求的时间改掉前必须先 request_confirmation；审核未通过的素材不允许保存。返回 published 恒为 false。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "material_id": {"type": "string", "description": "素材 ID"},
                     "scheduled_time": {"type": "string", "description": "拟排期时段 HH:MM"},
                     "date": DATE_PROP,
+                    "channel": CHANNEL_PROP,
                     "reason": REASON_PROP,
                 },
                 "required": ["material_id", "scheduled_time", "reason"],
@@ -123,8 +131,27 @@ class Toolbox:
         request = self.requests.get(material_id) or {}
         return str(request.get("requested_date") or self.date)
 
-    def _date_error(self, date: str) -> dict[str, Any] | None:
-        available = self.store.available_dates()
+    def request_channel(self, material_id: str) -> str:
+        """素材要发的频道；请求没写就是主频道。"""
+        request = self.requests.get(material_id) or {}
+        return str(request.get("requested_channel") or self.store.default_channel())
+
+    def _channel_error(self, channel: str) -> dict[str, Any] | None:
+        if self.store.has_channel(channel):
+            return None
+        return _err(
+            "CHANNEL_NOT_AVAILABLE",
+            f"{channel} 不在可排频道内：{self.store.channels()}",
+            recoverable=False,
+            hint="只能排 schedule.json 里配置过的频道；不要臆造频道",
+        )
+
+    def _channel_tag(self, channel: str) -> str:
+        """主频道沿用原来的 id，其它频道加后缀——两个频道里的同一时段是两个身份。"""
+        return "" if channel == self.store.default_channel() else f"-{channel}"
+
+    def _date_error(self, date: str, channel: str | None = None) -> dict[str, Any] | None:
+        available = self.store.available_dates(channel)
         if date in available:
             return None
         return _err(
@@ -220,11 +247,17 @@ class Toolbox:
         evaluation = evaluate_rules(material, self.store.rules_doc)
         return {"ok": True, "material_id": material_id, **evaluation}
 
-    def query_time_slot(self, material_id: str, time: str, reason: str, date: str | None = None) -> dict[str, Any]:
+    def query_time_slot(
+        self, material_id: str, time: str, reason: str, date: str | None = None, channel: str | None = None
+    ) -> dict[str, Any]:
         if self.store.material(material_id) is None:
             return _err("MATERIAL_NOT_FOUND", f"素材 {material_id} 不存在", recoverable=False)
+        target_channel = channel or self.request_channel(material_id)
+        channel_error = self._channel_error(target_channel)
+        if channel_error:
+            return channel_error
         target_date = date or self.request_date(material_id)
-        date_error = self._date_error(target_date)
+        date_error = self._date_error(target_date, target_channel)
         if date_error:
             return date_error
         hours = self.store.operating_hours()
@@ -235,7 +268,9 @@ class Toolbox:
                 f"{time} 不在营业时段 {hours['start']}-{hours['end']} 或不在 {hours['granularity_min']} 分钟网格上",
                 hint=f"可用网格示例：{grid[:4]}",
             )
-        occupied = self.store.occupied_slots(target_date) + self.store.drafted_slots(target_date, exclude_material=material_id)
+        occupied = self.store.occupied_slots(target_date, target_channel) + self.store.drafted_slots(
+            target_date, exclude_material=material_id, channel=target_channel
+        )
         conflicts = find_conflicts(occupied, time)
         ranked = rank_alternatives(
             hours, occupied, time, preferences=self.store.rules_doc.get("preferences")
@@ -243,22 +278,27 @@ class Toolbox:
         return {
             "ok": True,
             "material_id": material_id,
+            "channel": target_channel,
             "date": target_date,
             "time": time,
             "available": not conflicts,
             "conflicts": conflicts,
             "alternatives": [row["time"] for row in ranked],
             "ranked_alternatives": ranked,
-            "next_available": None if ranked else self.next_day_slot(target_date, material_id, hours),
+            "next_available": None if ranked else self.next_day_slot(target_date, material_id, hours, target_channel),
             "occupied_count": len(occupied),
         }
 
-    def next_day_slot(self, target_date: str, material_id: str, hours: dict[str, Any]) -> dict[str, Any] | None:
-        """当天请求时段之后已经排不下时，去后面配置过的日期里找第一个可用时段。"""
-        for day in self.store.available_dates():
+    def next_day_slot(
+        self, target_date: str, material_id: str, hours: dict[str, Any], channel: str | None = None
+    ) -> dict[str, Any] | None:
+        """当天请求时段之后已经排不下时，去同一频道后面配置过的日期里找第一个可用时段。"""
+        for day in self.store.available_dates(channel):
             if day <= target_date:
                 continue
-            occupied = self.store.occupied_slots(day) + self.store.drafted_slots(day, exclude_material=material_id)
+            occupied = self.store.occupied_slots(day, channel) + self.store.drafted_slots(
+                day, exclude_material=material_id, channel=channel
+            )
             ranked = rank_alternatives(hours, occupied, None, preferences=self.store.rules_doc.get("preferences"))
             if not ranked:
                 continue
@@ -271,17 +311,27 @@ class Toolbox:
         return None
 
     def request_confirmation(
-        self, material_id: str, proposed_time: str, question: str, reason: str, date: str | None = None
+        self,
+        material_id: str,
+        proposed_time: str,
+        question: str,
+        reason: str,
+        date: str | None = None,
+        channel: str | None = None,
     ) -> dict[str, Any]:
         _, request, error = self._material_and_request(material_id)
         if error:
             return error
+        target_channel = channel or self.request_channel(material_id)
+        channel_error = self._channel_error(target_channel)
+        if channel_error:
+            return channel_error
         requested_date = self.request_date(material_id)
         proposed_date = date or requested_date
-        date_error = self._date_error(proposed_date)
+        date_error = self._date_error(proposed_date, target_channel)
         if date_error:
             return date_error
-        confirmation_id = f"C-{material_id}-{proposed_date}-{proposed_time.replace(':', '')}"
+        confirmation_id = f"C-{material_id}-{proposed_date}-{proposed_time.replace(':', '')}{self._channel_tag(target_channel)}"
         existing = self.store.confirmations.get(confirmation_id)
         if existing:
             return {
@@ -296,6 +346,7 @@ class Toolbox:
         record = {
             "confirmation_id": confirmation_id,
             "date": proposed_date,
+            "channel": target_channel,
             "requested_date": requested_date,
             "proposed_date": proposed_date,
             "material_id": material_id,
@@ -324,10 +375,21 @@ class Toolbox:
             self.save_failures_left -= 1
         return True
 
-    def save_draft(self, material_id: str, scheduled_time: str, reason: str, date: str | None = None) -> dict[str, Any]:
+    def save_draft(
+        self,
+        material_id: str,
+        scheduled_time: str,
+        reason: str,
+        date: str | None = None,
+        channel: str | None = None,
+    ) -> dict[str, Any]:
         material, request, error = self._material_and_request(material_id)
         if error:
             return error
+        target_channel = channel or self.request_channel(material_id)
+        channel_error = self._channel_error(target_channel)
+        if channel_error:
+            return channel_error
         evaluation = evaluate_rules(material, self.store.rules_doc)
         if not evaluation["can_draft"]:
             return _err(
@@ -341,7 +403,7 @@ class Toolbox:
             return _err("BAD_TIME", f"{scheduled_time} 不在营业时段或网格上", hint=f"{hours['start']}-{hours['end']}，{hours['granularity_min']} 分钟粒度")
         requested_date = self.request_date(material_id)
         scheduled_date = date or requested_date
-        date_error = self._date_error(scheduled_date)
+        date_error = self._date_error(scheduled_date, target_channel)
         if date_error:
             return date_error
         requested_time = request["requested_time"]
@@ -350,14 +412,14 @@ class Toolbox:
         changed = time_changed or date_changed
         # pending 与 approved 都算"用户已看到这个改动"；只有 pending 才需要继续等用户拍板。
         approvals = [
-            c for c in self.store.confirmations_for(requested_date, material_id, requested_time)
+            c for c in self.store.confirmations_for(requested_date, material_id, requested_time, target_channel)
             if c.get("proposed_date", c.get("date")) == scheduled_date
             and c["proposed_time"] == scheduled_time
             and c["status"] in ("pending", "approved")
         ]
         awaiting_user = any(c["status"] == "pending" for c in approvals)
         rejected = [
-            c for c in self.store.confirmations_for(requested_date, material_id, requested_time)
+            c for c in self.store.confirmations_for(requested_date, material_id, requested_time, target_channel)
             if c.get("proposed_date", c.get("date")) == scheduled_date
             and c["proposed_time"] == scheduled_time
             and c.get("status") == "rejected"
@@ -374,7 +436,9 @@ class Toolbox:
                 f"{requested_date} {requested_time} 是用户硬性要求，改到 {scheduled_date} {scheduled_time} 必须先获得用户确认",
                 hint="先调用 request_confirmation 登记待确认项，再保存草稿",
             )
-        occupied = self.store.occupied_slots(scheduled_date) + self.store.drafted_slots(scheduled_date, exclude_material=material_id)
+        occupied = self.store.occupied_slots(scheduled_date, target_channel) + self.store.drafted_slots(
+            scheduled_date, exclude_material=material_id, channel=target_channel
+        )
         conflicts = find_conflicts(occupied, scheduled_time)
         if conflicts:
             return _err(
@@ -390,10 +454,11 @@ class Toolbox:
                 hint="可以重试；若仍失败必须如实报告保存失败，不得声称保存成功",
             )
         # draft_id 跟“用户要求”走（与去重键一致）：换替代时段重提时 id 不变，改期只体现在 scheduled_time/date。
-        draft_id = f"D-{material_id}-{requested_date}-{requested_time.replace(':', '')}"
+        draft_id = f"D-{material_id}-{requested_date}-{requested_time.replace(':', '')}{self._channel_tag(target_channel)}"
         record = {
             "draft_id": draft_id,
             "date": scheduled_date,
+            "channel": target_channel,
             "requested_date": requested_date,
             "material_id": material_id,
             "requested_time": requested_time,
@@ -411,6 +476,7 @@ class Toolbox:
             "ok": True,
             "draft_id": stored["draft_id"],
             "material_id": material_id,
+            "channel": stored.get("channel", target_channel),
             "date": stored["date"],
             "requested_time": requested_time,
             "scheduled_time": stored["scheduled_time"],

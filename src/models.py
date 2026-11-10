@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 
 SYSTEM_TEMPLATE = """你是短视频内容团队的「素材审核与发布排期助手」。今天是 {date}，营业时段 {start}-{end}，{granularity} 分钟粒度。
 可排日期：{dates}（不带日期的请求默认排 {date}）。
+可排频道：{channels}（不带频道的请求默认排 {channel}；频道之间互不占位）。
 
 本次排期请求（用户原始要求，按顺序处理，共 {count} 条）：
 {requests}
@@ -26,7 +27,11 @@ SYSTEM_TEMPLATE = """你是短视频内容团队的「素材审核与发布排�
 
 
 def build_system_prompt(
-    run: dict[str, Any], schedule_date: str, hours: dict[str, Any], available_dates: Sequence[str] | None = None
+    run: dict[str, Any],
+    schedule_date: str,
+    hours: dict[str, Any],
+    available_dates: Sequence[str] | None = None,
+    channels: Sequence[dict[str, Any]] | None = None,
 ) -> str:
     requests = run.get("requests", [])
     lines = []
@@ -34,11 +39,16 @@ def build_system_prompt(
         hard = "hard=true（不可擅自更改）" if req.get("time_hard") else "hard=false（可协商，但仍需说明）"
         note = f"，备注：{req['note']}" if req.get("note") else ""
         day = req.get("requested_date") or schedule_date
-        lines.append(f"- {req['material_id']}：要求 {day} {req['requested_time']} 发布，{hard}{note}")
+        where = f"在频道 {req['requested_channel']} " if req.get("requested_channel") else ""
+        lines.append(f"- {req['material_id']}：要求 {day} {req['requested_time']} {where}发布，{hard}{note}")
     dates = list(available_dates or [schedule_date])
+    catalog = list(channels or [{"name": "main", "label": "主频道", "default": True}])
+    default_channel = next((c["name"] for c in catalog if c.get("default")), catalog[0]["name"])
     return SYSTEM_TEMPLATE.format(
         date=schedule_date,
         dates="、".join(dates),
+        channel=default_channel,
+        channels="、".join(f"{c['name']}（{c['label']}）" for c in catalog),
         start=hours["start"],
         end=hours["end"],
         granularity=hours["granularity_min"],
@@ -48,6 +58,7 @@ def build_system_prompt(
 
 
 DATE_AWARE_TOOLS = {"query_time_slot", "request_confirmation", "save_draft"}
+CHANNEL_AWARE_TOOLS = DATE_AWARE_TOOLS
 
 
 class ScriptedChatModel:
@@ -74,6 +85,8 @@ class ScriptedChatModel:
                 name, args = action
                 if name in DATE_AWARE_TOOLS and req.get("requested_date") and "date" not in args:
                     args["date"] = req["requested_date"]
+                if name in CHANNEL_AWARE_TOOLS and req.get("requested_channel") and "channel" not in args:
+                    args["channel"] = req["requested_channel"]
                 return self._call(name, args)
         saves = [h for h in history if h["tool"] == "save_draft"]
         stored = sum(1 for h in saves if (h["result"] or {}).get("ok"))

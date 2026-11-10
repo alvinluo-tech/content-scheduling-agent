@@ -294,3 +294,62 @@ class MultiDayToolboxTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChannelToolboxTest(unittest.TestCase):
+    """频道维度：占位、确认项、去重键都按频道隔离，同一时刻在两个频道是两件事。"""
+
+    def setUp(self) -> None:
+        self._ctx = temp_ledger()
+        self.ledger = self._ctx.__enter__()
+        self.store = Store(DATA_DIR, self.ledger)
+        self.toolbox = Toolbox(
+            self.store,
+            make_run("M02", requested_time="12:00", time_hard=True, requested_channel="shorts"),
+        )
+
+    def tearDown(self) -> None:
+        self._ctx.__exit__(None, None, None)
+
+    def test_slot_lookup_is_scoped_to_the_requested_channel(self) -> None:
+        shorts = self.toolbox.call(
+            "query_time_slot", {"material_id": "M02", "time": "12:00", "channel": "shorts", "reason": "查短片频道午间档"}
+        )
+        self.assertTrue(shorts["ok"])
+        self.assertFalse(shorts["available"])
+        self.assertEqual([c["material_id"] for c in shorts["conflicts"]], ["M00"])
+        main = self.toolbox.call(
+            "query_time_slot", {"material_id": "M02", "time": "12:00", "channel": "main", "reason": "同一时刻在主频道是空的"}
+        )
+        self.assertTrue(main["ok"])
+        self.assertTrue(main["available"])
+        self.assertEqual(main["conflicts"], [])
+
+    def test_unknown_channel_is_refused_without_guessing(self) -> None:
+        result = self.toolbox.call(
+            "save_draft",
+            {"material_id": "M02", "scheduled_time": "12:00", "channel": "douyin", "reason": "试一个不存在的频道"},
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "CHANNEL_NOT_AVAILABLE")
+        self.assertFalse(result["error"]["recoverable"])
+
+    def test_same_material_in_two_channels_creates_two_drafts(self) -> None:
+        self.toolbox.call("request_confirmation", {
+            "material_id": "M02", "proposed_time": "12:30", "channel": "shorts",
+            "question": "12:00 已被占用，改到 12:30 可以吗", "reason": "硬性时段冲突",
+        })
+        shorts = self.toolbox.call(
+            "save_draft",
+            {"material_id": "M02", "scheduled_time": "12:30", "channel": "shorts", "reason": "按确认的 12:30 落草稿"},
+        )
+        main = self.toolbox.call(
+            "save_draft",
+            {"material_id": "M02", "scheduled_time": "12:00", "channel": "main", "reason": "主频道同一时刻空闲，直接落草稿"},
+        )
+        self.assertTrue(shorts["ok"])
+        self.assertTrue(main["ok"])
+        self.assertNotEqual(shorts["draft_id"], main["draft_id"])
+        self.assertEqual(len(self.store.drafts), 2)
+        self.assertEqual([c["channel"] for c in self.store.confirmations.values()], ["shorts"])
+

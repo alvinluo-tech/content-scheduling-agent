@@ -26,6 +26,7 @@ def make_run(
     *material_ids: str,
     requested_time: str = "18:00",
     requested_date: str | None = None,
+    requested_channel: str | None = None,
     time_hard: bool = False,
     save_failures: int = 0,
     now: str = "2026-11-12T09:00:00+08:00",
@@ -36,6 +37,8 @@ def make_run(
         request: dict[str, Any] = {"material_id": mid, "requested_time": requested_time, "time_hard": time_hard}
         if requested_date:
             request["requested_date"] = requested_date
+        if requested_channel:
+            request["requested_channel"] = requested_channel
         requests.append(request)
     return {
         "run_id": "unit-test",

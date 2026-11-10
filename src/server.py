@@ -76,6 +76,12 @@ CASE_META: list[dict[str, Any]] = [
         "tag": "顺延",
         "note": "11-14 整日排满，18:00 之后没有位置：工具给出次日 09:30，硬性要求必须登记待确认",
     },
+    {
+        "file": "09-channel",
+        "title": "短视频频道",
+        "tag": "频道",
+        "note": "shorts 的 12:00 被 M00 占用（主频道同一时刻是空的）：M02 只能提议 12:30 并待确认，M06 13:00 直接落草稿",
+    },
 ]
 
 RUN_LOCK = threading.Lock()
@@ -106,11 +112,26 @@ def snapshot() -> dict[str, Any]:
     ledger = _load_or_default(LEDGER_PATH, {"drafts": {}, "confirmations": {}})
     days = schedule.get("days", {})
     default_date = schedule.get("date")
+    default_channel = schedule.get("channel", "main")
+    channel_days = {
+        default_channel: days,
+        **{name: item.get("days", {}) for name, item in schedule.get("channels", {}).items()},
+    }
     return {
         "date": default_date,
         "dates": sorted(days.keys()),
         "days": {day: days.get(day, []) for day in sorted(days.keys())},
-        "channel": schedule.get("channel"),
+        "channel": default_channel,
+        "channels": [
+            {
+                "name": name,
+                "label": schedule.get("channel_label", "主频道") if name == default_channel else schedule["channels"][name].get("label", name),
+                "default": name == default_channel,
+                "dates": sorted(channel_days.get(name, {}).keys()),
+            }
+            for name in [default_channel] + [n for n in schedule.get("channels", {}) if n != default_channel]
+        ],
+        "channel_days": {name: {day: items for day, items in doc.items()} for name, doc in channel_days.items()},
         "timezone": schedule.get("timezone"),
         "hours": rules.get("operating_hours", {}),
         "rules": [

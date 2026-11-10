@@ -66,8 +66,10 @@ def _material_section(row: dict[str, Any], index: int) -> list[str]:
     for reason in row.get("risk_reasons") or []:
         mark = SEVERITY_MARK.get(reason.get("severity"), str(reason.get("severity")))
         lines.append("- 风险 " + _code(reason.get("rule_id")) + "（" + mark + "）：" + str(reason.get("reason")))
+    channel = str(row.get("channel") or "")
+    where = "，频道 " + _code(channel) if channel else ""
     lines.append(
-        "- 用户要求：" + str(row.get("requested_date")) + " " + str(row.get("requested_time"))
+        "- 用户要求：" + str(row.get("requested_date")) + " " + str(row.get("requested_time")) + where
         + "（硬性=" + ("是" if row.get("time_hard") else "否") + "）"
     )
     if row.get("suggested_time"):
@@ -132,6 +134,9 @@ def render_report(report: dict[str, Any], trace: dict[str, Any] | None = None) -
     limits = report.get("limits") or {}
     summary = report.get("summary") or {}
     dates = report.get("dates") or [report.get("date")]
+    channels = [str(c) for c in (report.get("channels") or []) if c]
+    if not channels and report.get("channel"):
+        channels = [str(report["channel"])]
     model = report.get("model") or {}
     lines = [
         "# 排期报告 · " + str(report.get("run_id", "run")),
@@ -139,6 +144,7 @@ def render_report(report: dict[str, Any], trace: dict[str, Any] | None = None) -
         "> 只保存草稿，未接真实发布通道；published 恒为 false。",
         "",
         "- 可排日期：" + "、".join(str(d) for d in dates),
+        *(["- 频道：" + "、".join(channels)] if channels else []),
         "- 状态：" + STATUS_LABEL.get(report.get("status"), str(report.get("status"))),
         "- 结果：**" + OUTCOME_LABEL.get(report.get("outcome"), str(report.get("outcome"))) + "**",
         "- 步数：" + str(limits.get("steps_used")) + " / " + str(limits.get("max_steps"))

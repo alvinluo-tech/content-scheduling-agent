@@ -1,6 +1,11 @@
 {
   "run_id": "case06-step-limit",
   "date": "2026-11-12",
+  "channel": "main",
+  "channels": [
+    "main",
+    "shorts"
+  ],
   "dates": [
     "2026-11-12",
     "2026-11-13",
@@ -28,6 +33,8 @@
     {
       "material_id": "M02",
       "title": "新机开箱速览以及全场景续航实测说明",
+      "channel": "main",
+      "channel_label": "主频道",
       "requested_date": "2026-11-12",
       "requested_time": "11:00",
       "time_hard": true,
@@ -73,6 +80,8 @@
     {
       "material_id": "M05",
       "title": "秋日露营 vlog 预告",
+      "channel": "main",
+      "channel_label": "主频道",
       "requested_date": "2026-11-12",
       "requested_time": "16:00",
       "time_hard": false,

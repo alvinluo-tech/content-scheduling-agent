@@ -1,0 +1,24 @@
+{
+  "run_id": "case09-channel",
+  "now": "2026-11-12T09:20:00+08:00",
+  "$comment": "短视频频道：12:00 已被 M00 占用（主频道同一时刻是空的），M02 的硬性要求只能提议 12:30 并待确认；M06 13:00 空闲直接落草稿。",
+  "requests": [
+    {
+      "material_id": "M02",
+      "requested_channel": "shorts",
+      "requested_time": "12:00",
+      "time_hard": true,
+      "note": "短版开箱要在午间档首发，不能挪到别的时段"
+    },
+    {
+      "material_id": "M06",
+      "requested_channel": "shorts",
+      "requested_time": "13:00",
+      "time_hard": false,
+      "note": "午休之后的通勤内容"
+    }
+  ],
+  "simulate": {
+    "save_failures": 0
+  }
+}
