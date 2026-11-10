@@ -69,6 +69,16 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("排期台", body.decode("utf-8"))
 
+    def test_index_keeps_the_keyboard_and_screen_reader_hooks(self) -> None:
+        _, page = self.get("/")
+        html = page.decode("utf-8")
+        self.assertIn('aria-live="polite"', html)
+        self.assertIn('id="meta-duration"', html)
+        _, script = self.get("/app.js")
+        js = script.decode("utf-8")
+        self.assertIn("ArrowDown", js)
+        self.assertIn("tabIndex", js)
+
     def test_static_css_is_served_with_right_content_type(self) -> None:
         status, _ = self.get("/app.css")
         self.assertEqual(status, 200)

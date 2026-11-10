@@ -29,6 +29,7 @@ test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
 test_human_approval_turns_pending_draft_into_ready (tests.test_server.ServerTestCase.test_human_approval_turns_pending_draft_into_ready) ... ok
 test_index_is_served (tests.test_server.ServerTestCase.test_index_is_served) ... ok
+test_index_keeps_the_keyboard_and_screen_reader_hooks (tests.test_server.ServerTestCase.test_index_keeps_the_keyboard_and_screen_reader_hooks) ... ok
 test_markdown_export_needs_a_run_then_serves_the_last_one (tests.test_server.ServerTestCase.test_markdown_export_needs_a_run_then_serves_the_last_one) ... ok
 test_path_traversal_is_refused (tests.test_server.ServerTestCase.test_path_traversal_is_refused) ... ok
 test_repeated_submission_keeps_one_draft (tests.test_server.ServerTestCase.test_repeated_submission_keeps_one_draft) ... ok
@@ -61,6 +62,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 58 tests in 7.729s
+Ran 59 tests in 5.414s
 
 OK

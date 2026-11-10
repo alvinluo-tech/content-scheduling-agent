@@ -15,7 +15,7 @@
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具、替代时段的推荐理由随工具结果返回 |
 | 图级 | `tests/test_agent_flow.py` | 7 个用例端到端、多日冲突只在自己那一天待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件 |
-| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days` 两天占位）、7 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序与人工确认回写 |
+| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days` 两天占位）、7 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序与人工确认回写、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
 
 ## 七个用例的实际结果（离线 Mock）
 
@@ -52,7 +52,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-九张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+十张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -63,6 +63,7 @@
 | `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
 | `docs/images/web-02-conflict-approved.png` | 人工确认后重跑 | 点「记为用户已确认」后确认项变 `approved`、结论变「已排期 · 仅草稿」、`requires_user_confirmation=false`、`published` 仍为 false |
 | `docs/images/web-02-conflict-streaming.png` | 真实模型运行中（第 3 条决策） | 右栏逐条推送（`执行中 · 已产生 3 条决策记录`，朱红呼吸点），中间上一轮结论压暗；跑完后恢复亮度并换成新结果 |
+| `docs/images/web-narrow.png` | 884px 窄屏（单列） | 三栏在 ≤1000px 折成一列，场景列表、执行区、结论依次堆叠；顶栏出现「耗时 43 毫秒」，说明计时来自本轮真实运行而不是写死 |
 | `docs/images/web-report-md.png` | 结论下方的报告导出 | 结论行下出现「导出 Markdown 报告」；点它下载的就是上面那份报告（同一份 `report` + 决策记录），`已发布 否` |
 | `docs/images/web-07-multiday.png` | 多日排期 | 页面顶部「2026-11-12 起 2 天」；时段带上方出现两天切换（11-13 激活）；11-13 明细列出 09:00 M07 / 09:30 草稿 M06 / 14:00 M06 / 20:00 草稿 M07；结论「待用户确认」、`已发布 false` |
 

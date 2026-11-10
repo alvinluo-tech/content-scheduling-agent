@@ -77,7 +77,8 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 `web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）、
 `web-02-conflict-streaming.png`（真实模型运行中的一帧：右栏逐条推送，中间上一轮结论压暗）、
 `web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、
-`web-report-md.png`（结论下方多出「导出 Markdown 报告」）。
+`web-report-md.png`（结论下方多出「导出 Markdown 报告」）、`web-narrow.png`（884px 窄屏：单列堆叠，顶栏显示本轮耗时）。
+键盘操作：`↑`/`↓`（或 `←`/`→`）在场景间移动、`Ctrl/⌘ + Enter` 运行，焦点有可见描边。
 
 ## 评审入口（按题面验收点）
 

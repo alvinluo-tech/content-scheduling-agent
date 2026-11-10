@@ -16,6 +16,7 @@
   </div>
   <dl class="meta">
     <div><dt>日期</dt><dd id="meta-date">—</dd></div>
+    <div><dt>耗时</dt><dd id="meta-duration">—</dd></div>
     <div><dt>频道</dt><dd id="meta-channel">—</dd></div>
     <div><dt>账本</dt><dd id="meta-ledger" class="mono">—</dd></div>
   </dl>
@@ -56,7 +57,7 @@
       <div class="verdict">
         <div class="verdict-main">
           <p class="eyebrow" id="verdict-sub">运行结论</p>
-          <p class="outcome" id="outcome">—</p>
+          <p class="outcome" id="outcome" aria-live="polite">—</p>
         </div>
         <ul class="counters" id="counters"></ul>
       </div>
@@ -87,7 +88,7 @@
 
   <aside class="rail rail-right">
     <section class="panel trace-panel">
-      <h2 class="panel-title">决策记录<em id="trace-limits">未运行</em></h2>
+      <h2 class="panel-title">决策记录<em id="trace-limits" aria-live="polite">未运行</em></h2>
       <ol class="trace" id="trace"></ol>
     </section>
   </aside>

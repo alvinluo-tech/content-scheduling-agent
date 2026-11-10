@@ -56,6 +56,7 @@
   var running = false;
   var stream = null;
   var finished = false;
+  var startedAt = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -118,9 +119,36 @@
       btn.appendChild(el("span", "case-tag", item.tag));
       btn.appendChild(el("span", "case-note", item.note));
       btn.addEventListener("click", function () { select(item.file); });
+      btn.addEventListener("keydown", onCaseKey);
       li.appendChild(btn);
       root.appendChild(li);
     });
+    syncCaseTabindex();
+  }
+
+  /* 列表是单选组：只有当前项进 Tab 序列，箭头键在项之间移动。 */
+  function syncCaseTabindex() {
+    Array.prototype.forEach.call(document.querySelectorAll(".case"), function (node) {
+      node.tabIndex = node.dataset.case === selected ? 0 : -1;
+    });
+  }
+
+  function onCaseKey(event) {
+    var keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+    var nodes = Array.prototype.slice.call(document.querySelectorAll(".case"));
+    var here = nodes.indexOf(event.currentTarget);
+    var next = null;
+    if (event.key in keys) {
+      next = nodes[(here + keys[event.key] + nodes.length) % nodes.length];
+    } else if (event.key === "Home") {
+      next = nodes[0];
+    } else if (event.key === "End") {
+      next = nodes[nodes.length - 1];
+    }
+    if (!next) { return; }
+    event.preventDefault();
+    select(next.dataset.case);
+    next.focus();
   }
 
   function select(name) {
@@ -128,6 +156,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".case"), function (node) {
       node.setAttribute("aria-current", node.dataset.case === name ? "true" : "false");
     });
+    syncCaseTabindex();
   }
 
   /* ---------- timeline ---------- */
@@ -422,6 +451,15 @@
     (trace.steps || []).forEach(function (step) { root.appendChild(stepItem(step)); });
   }
 
+  /* 耗时按浏览器时钟算：它只说明"这一轮跑了多久"，结论仍只信 report。 */
+  function renderDuration() {
+    if (!startedAt) { $("meta-duration").textContent = "—"; return; }
+    var elapsed = Date.now() - startedAt;
+    $("meta-duration").textContent = elapsed < 1000
+      ? Math.max(1, Math.round(elapsed)) + " 毫秒"
+      : (elapsed / 1000).toFixed(1) + " 秒";
+  }
+
   function stepItem(step) {
     var li = el("li", "step");
     var head = el("div", "step-head");
@@ -500,6 +538,8 @@
     var maxSteps = $("max-steps").value;
     if (maxSteps) { params.set("max_steps", maxSteps); }
 
+    startedAt = Date.now();
+    $("meta-duration").textContent = "计中…";
     $("empty").hidden = true;
     $("results").hidden = false;
     $("results").classList.add("stale");  // 上一轮的结论先压暗，别让人误以为是新的
@@ -519,6 +559,7 @@
       state = payload.state;
       renderMeta(state);
       renderReport(payload.report, payload.trace);
+      renderDuration();
       $("results").classList.remove("stale");
       closeStream();
       setRunning(false);
