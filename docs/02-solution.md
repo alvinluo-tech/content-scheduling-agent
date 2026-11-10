@@ -28,7 +28,7 @@
 | --- | --- | --- |
 | `read_material` | 读元数据，返回缺失的必填字段 | 素材必须在本次请求范围内（`NO_REQUEST`）；不存在 → `MATERIAL_NOT_FOUND` |
 | `check_rules` | 按 R01-R05 审核 | 返回 `review_status`（pass / pass_with_warnings / missing_info / risk）与 `can_draft` |
-| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段及其排序理由（`date` 可选，缺省用该素材的 `requested_date`）；当天更晚已无位置时额外返回 `next_available`（后面配置过的日期里第一个可用时段及理由） | 不在营业时段/网格 → `BAD_TIME`；日期不在 `schedule.json` 的 `days` 里 → `DATE_NOT_AVAILABLE`（不可恢复）；占用按天算，草稿同样占位（但自己的草稿不算冲突） |
+| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段及其排序理由（`date` 可选，缺省用该素材的 `requested_date`；`channel` 可选，缺省用该素材的 `requested_channel`）；当天更晚已无位置时额外返回 `next_available`（该频道后面配置过的日期里第一个可用时段及理由） | 不在营业时段/网格 → `BAD_TIME`；日期不在该频道的 `days` 里 → `DATE_NOT_AVAILABLE`、频道没配置 → `CHANNEL_NOT_AVAILABLE`（均不可恢复）；占用按`频道 + 日期`算，草稿同样占位（但自己的草稿不算冲突） |
 | `request_confirmation` | 把"需要人拍板"变成一条可追踪的记录 | 幂等：同一 `(素材, 请求时段, 建议时段)` 只登记一条 |
 | `save_draft` | 写草稿账本（`date` 可选） | ① 硬性时间的时间或日期被改动且未确认 → `HARD_CONSTRAINT_VIOLATION`；② `can_draft=false` → `MATERIAL_NOT_READY`；③ 时段被占 → `SLOT_CONFLICT`；④ 注入失败 → `SAVE_FAILED`；⑤ 重复提交 → 同 `draft_id`，`deduplicated=true` |
 
@@ -76,6 +76,13 @@
 - 前端只做渲染与状态映射：`review_status` / `outcome` / `draft.status` 逐个映射成中文标签，未映射的值不做猜测。
 - 边界：本地单机、无鉴权，只用于演示；CLI 仍是主入口，Web 不新增任何业务决策。
 
+## 频道之间为什么互不占位
+`schedule.json` 里主频道的排期放在顶层 `days`，其它频道放在 `channels.<name>.days`。`Store` 的每个读接口都多收一个
+`channel` 参数，占位、草稿、确认项三份数据都按频道过滤，所以"同一时刻主频道空着、短视频频道被占"是两条独立事实，
+不是同一份排期的一个标签。代价是 `draft_id` / `confirmation_id` 必须带频道后缀（`-shorts`），否则两个频道会抢同一个 id；
+收益是"不串道"由数据形状保证，而不是靠模型记得切换频道。
+未知频道一律 `CHANNEL_NOT_AVAILABLE`（不可恢复）：宁可让模型停下来问人，也不要它自己发明一个频道名。
+
 ## 替代时段为什么是这个顺序
 
 `policy.rank_alternatives()` 只排序、不新增候选：候选集合仍是营业时段网格里请求之后未被占用的格子，
@@ -113,5 +120,5 @@ CLI 用 `--report-md` 写文件，Web 用 `GET /api/report.md` 下载最近一�
 | 交互形态 | CLI | 评审可复现、无端口/环境依赖；HTTP 与 Notebook 都会引入与考核目标无关的复杂度 |
 | 框架 | LangGraph（显式图） | 用户指定；显式节点/边保留对循环与上限的控制权 |
 | 账本 | JSON 文件 + 原子写 | 3 小时范围内不引入数据库；原子替换保证不会写坏 |
-| 去重键 | `(requested_date, material_id, requested_time)` | 同一素材同一原始请求重复提交应落回同一份草稿；换请求时段视为新排期 |
+| 去重键 | `(channel, requested_date, material_id, requested_time)` | 同一素材同一原始请求重复提交应落回同一份草稿；换请求时段视为新排期；换频道是另一条排期（同一素材可在两个频道各排一份） |
 | 为确认单独建工具 | 是 | 让"请求确认"可观测、可校验顺序 |

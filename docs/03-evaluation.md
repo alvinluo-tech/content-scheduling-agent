@@ -13,11 +13,11 @@
 | --- | --- | --- |
 | 规则层 | `tests/test_policy.py` | R01-R05 的四种审核结论、时段网格、冲突与替代时段、替代时段的排序（近优先、间隔惩罚、偏好档加分） |
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具、替代时段的推荐理由随工具结果返回 |
-| 图级 | `tests/test_agent_flow.py` | 8 个用例端到端、多日冲突只在自己那一天待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
+| 图级 | `tests/test_agent_flow.py` | 9 个用例端到端、多日冲突只在自己那一天待确认、频道冲突只在自己那一个频道待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件 |
-| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days` 两天占位）、7 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
+| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
 
-## 八个用例的实际结果（离线 Mock）
+## 九个用例的实际结果（离线 Mock）
 
 | 用例 | status | outcome | steps / tools | 关键观察 |
 | --- | --- | --- | --- | --- |
@@ -28,6 +28,7 @@
 | 04-save-failure | completed | failed | 6 / 5 | 保存返回 SAVE_FAILED → 重试一次仍失败 → 停止；`result_status=save_failed`，无草稿，不谎报成功 |
 | 06-step-limit | step_limit_reached | incomplete | 3 / 3 | 上限 3 步：M02 停在查询后未保存、M05 未处理；`completed=false`、`unfinished_materials=[M02, M05]` |
 | 08-day-overflow | completed | pending_confirmation | 6 / 5 | 11-14 整日排满、18:00 之后没有位置 → 工具返回 `next_available=2026-11-15 09:30` → 登记 `C-M01-2026-11-15-0930` → 存草稿 `draft_pending_confirmation`；`date_changed=true`、`published=false`（顺延同样要过确认） |
+| 09-channel | completed | pending_confirmation | 10 / 9 | 两条请求都在 `shorts`：M02 的 12:00 被 M00 占 → 提议 12:30 并待确认（`draft_id=D-M02-2026-11-12-1200-shorts`、确认项 `C-M02-2026-11-12-1230-shorts`）；M06 13:00 空闲 → `draft_ready`；主频道同一时刻仍是空的（不串道），两条 `published=false` |
 | 07-multiday | completed | pending_confirmation | 10 / 9 | 两条请求都排 11-13：M06 的 09:00 被 M02 占 → 采纳工具给的首选替代 09:30 并待确认（`scheduled_date=2026-11-13`、`date_changed=false`）；M07 的 20:00 空闲 → `draft_ready`；两条 `published=false` |
 
 每条都可在 `examples/<case>.output.json`（结果）、`examples/<case>.trace.json`（分步动作/参数/观察/下一步）
@@ -55,7 +56,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-十四张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+十五张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -72,6 +73,7 @@
 | `docs/images/web-narrow.png` | 884px 窄屏（单列） | 三栏在 ≤1000px 折成一列，场景列表、执行区、结论依次堆叠；顶栏出现「耗时 43 毫秒」，说明计时来自本轮真实运行而不是写死 |
 | `docs/images/web-report-md.png` | 结论下方的报告导出 | 结论行下出现「导出 Markdown 报告」；点它下载的就是上面那份报告（同一份 `report` + 决策记录），`已发布 否` |
 | `docs/images/web-07-multiday.png` | 多日排期 | 页面顶部「2026-11-12 起 4 天」；时段带上方出现日期切换（11-13 激活）；11-13 明细列出 09:00 M02 / 09:30 草稿 M06 / 14:00 M00 / 20:00 草稿 M07；结论「待用户确认」、`已发布 false` |
+| `docs/images/web-09-channel.png` | 短视频频道 | 频道标签「主频道 / 短视频频道」（激活后者）、hint 写「短视频频道 · 2026-11-12」；M02 与 M06 都带「短视频频道」chip；明细 12:00 已有排期 M00 / 12:30 与 13:00 草稿占位（id 带 `-shorts`）/ 18:00 M05；切回主频道后 12:00、13:00 是空的（同一时刻不串道） |
 | `docs/images/web-08-day-overflow.png` | 当天排满 · 顺延次日 | 11-14 标签页激活、整日都是「已有排期」；M01 行写「要求 2026-11-14 18:00 · 硬性 / 建议 2026-11-15 09:30 / 已改时段 / 已改日期」；确认项问题是「当天更晚的时段已排满，是否同意顺延到 2026-11-15 09:30？」；步骤 3 的观察摘要写明「顺延到 2026-11-15 09:30」 |
 
 ## 失败与限制
@@ -81,7 +83,7 @@
 2. **规则是合成规则**：R01-R05 只覆盖题面点名的四类风险（缺字段、未授权、违禁词、敏感品类），
    真实内容审核还需要语义模型或人工。
 3. **排期不是最优化**：只保证不冲突 + 尊重用户要求，不做频道/流量/时长组合优化。
-4. **单频道**：多日已支持（`schedule.json` 的 `days`），但仍只有 `channel=main` 一个频道维度；真正的多渠道排期需要把频道加进占位键与工具入参。
+4. **频道维度只有两个合成频道**：`schedule.json` 的 `channels` 已支持任意多频道（示例给了 `shorts`），占位、去重、确认项都按频道隔离；但没有频道级的规则差异（比如短视频频道允许更短时长）与频道负载均衡——替代时段的排序仍只看距离、间隔与偏好档。
 5. ~~确认无回写通道~~ 已补：人可通过 `--approve C-...` 或 `POST /api/confirm` 把 pending 改成 approved，
    重跑即落 `draft_ready`（接口测试 `test_human_approval_turns_pending_draft_into_ready`）；
    `--reject C-...` / `POST /api/reject` 把同一方案连同草稿作废，`save_draft` 之后返回
