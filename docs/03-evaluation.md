@@ -3,7 +3,7 @@
 ## 测试预期与实际结果
 
 ```
-.venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 29 passed
+.venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 40 passed
 .venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 6 个用例
 ```
 
@@ -14,6 +14,7 @@
 | 规则层 | `tests/test_policy.py` | R01-R05 的四种审核结论、时段网格、冲突与替代时段 |
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具 |
 | 图级 | `tests/test_agent_flow.py` | 6 个用例端到端、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
+| 接口层 | `tests/test_server.py` | `/api/state` 字段、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False |
 
 ## 六个用例的实际结果（离线 Mock）
 
@@ -35,6 +36,19 @@
 `examples/02-conflict.output.json` 实测：`review_status=pass`、`requested_time=18:00`、`suggested_time=19:00`、
 `time_changed=true`、`hard_time_preserved=false`、`requires_user_confirmation=true`、
 `draft.status=draft_pending_confirmation`、`published=false`。一致。
+
+## Web 演示界面的验证
+
+界面不是另一条实现路径：`src/server.py` 的 `/api/run` 直接调 `run_pipeline()`，测试断言它跑出的报告与 CLI 同构
+（`tests/test_server.py`：02 场景 `steps_used=5`、首个工具 `read_material`、末个 `save_draft`、`published=False`）。
+四张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+
+| 截图 | 场景 | 页面上应看到的 |
+| --- | --- | --- |
+| `docs/images/web-02-conflict.png` | 时段冲突 | 结论「待用户确认」；M01 待确认 + 确认项 `C-M01-…-1900`；时段带 19:00 标红为建议；`已发布 false` |
+| `docs/images/web-03-rules.png` | 信息缺失 + 规则风险 | M03「信息缺失」、M04「已阻断」；风险行带 `R03`/`R05` 而非 `[object Object]`；草稿均「未落库」 |
+| `docs/images/web-04-save-failure.png` | 保存失败 | 结论「存在失败项」；M05「保存失败」、草稿「未保存（失败 2 次）」；trace 末两步 `FAIL` |
+| `docs/images/web-06-step-limit.png` | 步数上限 | 结论「步数上限中断」；`步数 3/3`；M02「未完成」、M05「未处理」，模型自述写明未收尾 |
 
 ## 失败与限制
 

@@ -5,7 +5,7 @@
 
 - 语言/框架：Python 3.10+ / LangGraph（显式 StateGraph + 工具节点）
 - 模型：DeepSeek 官方 API（OpenAI 兼容），默认 `deepseek-v4-pro`；无密钥时可用离线 Mock 跑通全流程
-- 交互形态：CLI（JSON 输入 → JSON 结果 + 逐步 trace）
+- 交互形态：CLI（JSON 输入 → JSON 结果 + 逐步 trace）；另附一个可选的 Web 演示界面（同一引擎的薄壳）
 
 ## 60 秒上手
 
@@ -40,6 +40,23 @@ cp .env.example .env         # 填入 DEEPSEEK_API_KEY=sk-...
 模型 id 不是猜的：`LLM_MODEL` 的值取自 `curl https://api.deepseek.com/models`（Bearer 密钥）实测返回的
 `deepseek-v4-pro` 与 `deepseek-flash`。想换模型改这一行即可，写错名字会在第一次请求时直接报错，不会悄悄换模型。
 
+## 可选：Web 演示界面
+
+CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的 `run_pipeline()`，报告与 trace 与 CLI 完全同构。
+
+```bash
+.venv/Scripts/python.exe -m src.server        # 打开 http://127.0.0.1:7860
+```
+
+左侧六个场景就是 `examples/` 里的输入，点「运行这个场景」会跑一次并把报告、时段带、决策记录渲染出来；
+「离线 Mock」勾选状态与 CLI 的 `--offline` 对应，取消勾选才走真实模型。演示账本写到 `.runtime/ledger.json`，
+不污染 `data/drafts.json`。
+
+![时段冲突场景](docs/images/web-02-conflict.png)
+
+截图：`docs/images/web-02-conflict.png`（冲突→待确认）、`web-03-rules.png`（信息缺失 + 规则风险）、
+`web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）。
+
 ## 评审入口（按题面验收点）
 
 | 验收点 | 用例 | 看什么 |
@@ -57,12 +74,13 @@ cp .env.example .env         # 填入 DEEPSEEK_API_KEY=sk-...
 ## 目录
 
 ```
-src/        store / policy / tools / models / graph / trace / report / main
+src/        store / policy / tools / models / graph / trace / report / main / server（Web 演示用，标准库 http.server）
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   6 个用例的输入 + 实际输出 + trace + test-results.txt
-tests/      29 个 unittest（规则、工具守卫、图级链路、trace 结构）
+web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
+tests/      40 个 unittest（规则、工具守卫、图级链路、trace 结构、HTTP 接口）
 scripts/    run_examples.py（一键重跑全部用例）
-docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘
+docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```
 
 ## 边界

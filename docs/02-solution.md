@@ -60,6 +60,13 @@
 `ScriptedChatModel` 用确定性状态机模拟"看工具结果决定下一步"，只用于验证流程、护栏与报告正确性。
 它**不证明**真实模型的决策质量——真实模型的 trace 见 `examples/*.live.*`（见 03 文档）。
 
+## Web 演示层（可选，不是第二套逻辑）
+`src/server.py` + `web/` 只是同一张图的展示壳：HTTP 处理函数校验场景名后调用 `src/main.py` 的 `run_pipeline()`，
+拿到的 `report` 与 `trace` 与 CLI 完全同构，三条红线一行都没有绕过。
+- 演示账本固定写到 `.runtime/ledger.json`（已 gitignore），不污染 `data/drafts.json`，避免"点一下演示就改了提交记录"。
+- 前端只做渲染与状态映射：`review_status` / `outcome` / `draft.status` 逐个映射成中文标签，未映射的值不做猜测。
+- 边界：本地单机、无鉴权，只用于演示；CLI 仍是主入口，Web 不新增任何业务决策。
+
 ## 取舍记录
 | 取舍 | 选择 | 理由 |
 | --- | --- | --- |
