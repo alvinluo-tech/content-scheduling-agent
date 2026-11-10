@@ -1,0 +1,58 @@
+{
+  "run_id": "case02-conflict",
+  "date": "2026-11-12",
+  "status": "completed",
+  "completed": true,
+  "outcome": "pending_confirmation",
+  "model": {
+    "mode": "deepseek",
+    "name": "deepseek-v4-pro"
+  },
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 5,
+    "tool_calls": 5
+  },
+  "summary": {
+    "total": 1,
+    "scheduled_pending_confirmation": 1
+  },
+  "materials": [
+    {
+      "material_id": "M01",
+      "title": "城市夜骑 30 秒混剪",
+      "requested_time": "18:00",
+      "time_hard": true,
+      "review_status": "pass",
+      "risk_reasons": [],
+      "missing_fields": [],
+      "suggested_time": "19:00",
+      "time_changed": true,
+      "hard_time_preserved": false,
+      "requires_user_confirmation": true,
+      "pending_confirmations": [
+        {
+          "confirmation_id": "C-M01-2026-11-12-1900",
+          "question": "客户指定首播 18:00 已被素材 M00 占用，是否同意将 M01 改期到 19:00？",
+          "proposed_time": "19:00",
+          "status": "pending"
+        }
+      ],
+      "draft": {
+        "draft_id": "D-M01-2026-11-12-1800",
+        "scheduled_time": "19:00",
+        "status": "draft_pending_confirmation",
+        "submit_count": 1,
+        "published": false
+      },
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "scheduled_pending_confirmation"
+    }
+  ],
+  "unfinished_materials": [],
+  "published": false,
+  "agent_summary": "处理完成，总结如下：\n\n**M01「城市夜骑 30 秒混剪」**\n- 素材信息齐全（30 秒、已授权、封面 m01.jpg、品类生活），审核状态为 **pass**，can_draft=true，可以保存草稿。\n- 用户硬性要求 **18:00 发布（hard=true）**，但查询发现 **18:00 已被 M00 占用**，无法使用该时段。\n- 按规则，改期前先登记了待确认项：建议从 18:00 改到最近的空闲时段 **19:00**（确认号 C-M01-2026-11-12-1900，状态 pending）。\n- 随后保存了草稿：拟排期 **19:00**，草稿号 D-M01-2026-11-12-1800，状态为 **draft_pending_confirmation**，published=false（仅草稿，未发布）。\n\n**需要你拍板的事项：**\n- M01 客户指定的 18:00 已被 M00 占用，我暂按建议时段 **19:00** 保存了草稿并登记了待确认项，需你确认是否同意改到 19:00（备选还有 19:30、20:30）。在你确认之前，19:00 仅作为建议，不能视为已确认或已发布。",
+  "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
+  "trace_file": "examples/02-conflict.live.trace.json"
+}

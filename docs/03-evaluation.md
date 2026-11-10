@@ -3,7 +3,7 @@
 ## 测试预期与实际结果
 
 ```
-.venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 28 passed
+.venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 29 passed
 .venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 6 个用例
 ```
 
@@ -38,8 +38,8 @@
 
 ## 失败与限制
 
-1. **真实模型路径尚未进入回归**：离线 Mock 用确定性状态机产动作，能证明"流程 + 护栏 + 报告"正确，
-   不能证明真实 LLM 的决策质量。真实模型 trace 见下节，并且不进 CI（依赖外部 API 与配额）。
+1. **真实模型路径不进 CI**：离线 Mock 用确定性状态机产动作，能证明"流程 + 护栏 + 报告"正确，
+   不能证明真实 LLM 的决策质量。真实模型的两条路径已在下节留下 trace，但每次运行依赖外部 API 与配额，因此不进 CI。
 2. **规则是合成规则**：R01-R05 只覆盖题面点名的四类风险（缺字段、未授权、违禁词、敏感品类），
    真实内容审核还需要语义模型或人工。
 3. **排期不是最优化**：只保证不冲突 + 尊重用户要求，不做频道/流量/时长组合优化。
@@ -50,14 +50,23 @@
 
 ## 真实模型（DeepSeek）验证
 
-状态：🔴 未完成 —— 需要 `DEEPSEEK_API_KEY`。补全方式：
+状态：🟢 已完成（2026-11-10）。模型 id 取自 `GET https://api.deepseek.com/models` 的实际返回：
+`deepseek-v4-pro`（默认）、`deepseek-flash`，仓库里不再出现未经核对的 `deepseek-chat`。密钥只在本机 `.env`，未入库。
 
 ```bash
-.venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json \
-  --out examples/02-conflict.live.output.json --trace examples/02-conflict.live.trace.json
-.venv/Scripts/python.exe -m src.main --input examples/04-save-failure.input.json \
-  --out examples/04-save-failure.live.output.json --trace examples/04-save-failure.live.trace.json
+.venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --out examples/02-conflict.live.output.json --trace examples/02-conflict.live.trace.json
+.venv/Scripts/python.exe -m src.main --input examples/04-save-failure.input.json --out examples/04-save-failure.live.output.json --trace examples/04-save-failure.live.trace.json
 ```
 
-拿到密钥后再补：两条路径的真实 trace、与 Mock 结果的差异对比（模型是否自己想到"先确认再保存"）、
-以及失败模式（是否谎报保存成功、是否跳过规则检查）。
+| 用例 | 真实模型的实际动作（按 trace 顺序） | 结果 | 与离线 Mock 的差异 |
+| --- | --- | --- | --- |
+| 02-conflict | 第 1 轮并行 `read_material` + `check_rules` → 第 2 轮 `query_time_slot`(18:00) 看到被 M00 占用 → 第 3 轮 `request_confirmation`(C-M01-2026-11-12-1900) → 第 4 轮 `save_draft`(19:00) | completed / pending_confirmation，5 次工具调用 / 5 轮；`draft_pending_confirmation`、`published=false` | Mock 串行 6 轮；真实模型把两个无依赖的读取并行发出，少一轮，决策顺序与结论一致 |
+| 04-save-failure | 第 1 轮并行 `read_material` + `check_rules` + `query_time_slot`(15:00) → 第 2 轮 `save_draft` 收 `SAVE_FAILED` → 第 3 轮重试一次仍失败 → 收尾 | completed / failed，5 次工具调用 / 4 轮；`failed_save_attempts=2`、无草稿 | Mock 串行 5 轮；结论相同（重试一次后如实放弃） |
+
+这次真实运行验证到的三件事：
+
+1. **「先确认、再改硬性时间」不是提示词祈使句**：模型确实先调 `request_confirmation` 再 `save_draft`，且 `save_draft` 的硬性时间护栏没有触发 `HARD_CONSTRAINT_VIOLATION`——护栏与模型行为互为验证。
+2. **没有谎报**：`agent_summary` 明确写「M05 的排期草稿目前未保存成功」「未发布」，与 `published=false`、`draft=null` 一致。
+3. **并行工具调用会改写「步」的口径**：模型在同一轮里并行发出无依赖的调用，于是 `limits.steps_used`（模型轮次）小于 trace 条目数。trace 的 `step` 现在按模型轮次编号（同轮共享步号），报告与 trace 口径一致。
+
+边界：每条路径只跑一次，样本量不足以证明稳定的决策质量；真实模型 trace 不进 CI（依赖外部 API 与配额）。

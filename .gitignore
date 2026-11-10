@@ -5,5 +5,3 @@ __pycache__/
 *.tmp
 .pytest_cache/
 .scratch/
-*.live.output.json
-*.live.trace.json
