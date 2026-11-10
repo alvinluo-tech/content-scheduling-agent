@@ -5,6 +5,11 @@
     "end": "21:00",
     "granularity_min": 30
   },
+  "preferences": {
+    "$comment": "替代时段的排序偏好：不新增候选，只影响顺序与理由",
+    "min_gap_minutes": 30,
+    "prefer_windows": [["18:00", "21:00"]]
+  },
   "banned_terms": [
     "最便宜",
     "全网最低",

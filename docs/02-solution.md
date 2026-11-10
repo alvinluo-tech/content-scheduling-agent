@@ -28,7 +28,7 @@
 | --- | --- | --- |
 | `read_material` | 读元数据，返回缺失的必填字段 | 素材必须在本次请求范围内（`NO_REQUEST`）；不存在 → `MATERIAL_NOT_FOUND` |
 | `check_rules` | 按 R01-R05 审核 | 返回 `review_status`（pass / pass_with_warnings / missing_info / risk）与 `can_draft` |
-| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段（`date` 可选，缺省用该素材的 `requested_date`） | 不在营业时段/网格 → `BAD_TIME`；日期不在 `schedule.json` 的 `days` 里 → `DATE_NOT_AVAILABLE`（不可恢复）；占用按天算，草稿同样占位（但自己的草稿不算冲突） |
+| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段及其排序理由（`date` 可选，缺省用该素材的 `requested_date`） | 不在营业时段/网格 → `BAD_TIME`；日期不在 `schedule.json` 的 `days` 里 → `DATE_NOT_AVAILABLE`（不可恢复）；占用按天算，草稿同样占位（但自己的草稿不算冲突） |
 | `request_confirmation` | 把"需要人拍板"变成一条可追踪的记录 | 幂等：同一 `(素材, 请求时段, 建议时段)` 只登记一条 |
 | `save_draft` | 写草稿账本（`date` 可选） | ① 硬性时间的时间或日期被改动且未确认 → `HARD_CONSTRAINT_VIOLATION`；② `can_draft=false` → `MATERIAL_NOT_READY`；③ 时段被占 → `SLOT_CONFLICT`；④ 注入失败 → `SAVE_FAILED`；⑤ 重复提交 → 同 `draft_id`，`deduplicated=true` |
 
@@ -70,6 +70,21 @@
   `GET /api/stream` 把监听器塞进队列、用 SSE 逐条写出，最后补一条 `report` 事件。图本身不知道有 Web 这回事。
 - 前端只做渲染与状态映射：`review_status` / `outcome` / `draft.status` 逐个映射成中文标签，未映射的值不做猜测。
 - 边界：本地单机、无鉴权，只用于演示；CLI 仍是主入口，Web 不新增任何业务决策。
+
+## 替代时段为什么是这个顺序
+
+`policy.rank_alternatives()` 只排序、不新增候选：候选集合仍是营业时段网格里请求之后未被占用的格子，
+评分只有三项，每项都写进 `reasons` 随工具结果一起返回：
+
+| 因子 | 作用 | 理由文案 |
+| --- | --- | --- |
+| 距离 | 每远一格 −1 分，越近越优 | `距请求时段 +60 分钟` |
+| 间隔 | 与最近已有排期贴得太近 −2 分（阈值 `preferences.min_gap_minutes`） | `与已有排期只隔 30 分钟（偏好 ≥60）` / `与已有排期间隔 60 分钟` |
+| 偏好档 | 落在 `preferences.prefer_windows` 内 +1.5 分（默认 18:00–21:00 晚间档） | `落在偏好时段 18:00–21:00` |
+
+数据里 `min_gap_minutes` 取值 30（等于一格），所以它只在真的"贴格子"时才生效；把它调大，
+排序会自己躲开拥挤时段——这一条由 `tests/test_policy.py` 用 60 分钟显式验证，避免"配置写了但从不生效"。
+排序结果不改变工具的判定：`available` 仍只看冲突，模型看到的第一个候选是"最推荐的"，不是"唯一合法的"。
 
 ## 报告导出（渲染层，不是第二条链路）
 `src/markdown.py` 是纯函数：输入同一份 `report`（可选带上 `trace`），输出人读的 Markdown。

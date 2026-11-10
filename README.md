@@ -101,7 +101,7 @@ src/        store / policy / tools / models / graph / trace / report / markdown 
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   7 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      55 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、Markdown 报告、HTTP 接口 / SSE 推送）
+tests/      58 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、替代时段排序、Markdown 报告、HTTP 接口 / SSE 推送）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```

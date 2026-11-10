@@ -4,7 +4,7 @@ import inspect
 from datetime import datetime
 from typing import Any, Callable
 
-from .policy import evaluate_rules, find_conflicts, is_blank, next_free_slots, slot_grid, to_minutes
+from .policy import evaluate_rules, find_conflicts, is_blank, rank_alternatives, slot_grid, to_minutes
 from .store import Store
 
 REASON_PROP = {
@@ -175,9 +175,11 @@ class Toolbox:
             ids = [v["rule_id"] for v in result["violations"]]
             return f"审核 {result['review_status']}，命中规则 {ids or '无'}"
         if name == "query_time_slot":
+            ranked = result.get("ranked_alternatives") or []
+            best = f"首选 {ranked[0]['time']}：{'；'.join(ranked[0]['reasons'])}" if ranked else "无候选时段"
             if result["available"]:
-                return f"{result['time']} 可用，后续可用时段 {result['alternatives']}"
-            return f"{result['time']} 被 {[c['material_id'] for c in result['conflicts']]} 占用，可用替代 {result['alternatives']}"
+                return f"{result['time']} 可用，后续可用时段 {result['alternatives']}；{best}"
+            return f"{result['time']} 被 {[c['material_id'] for c in result['conflicts']]} 占用，可用替代 {result['alternatives']}；{best}"
         if name == "request_confirmation":
             return f"待确认 {result['confirmation_id']} 已登记（{result['status']}）"
         if name == "save_draft":
@@ -230,6 +232,9 @@ class Toolbox:
             )
         occupied = self.store.occupied_slots(target_date) + self.store.drafted_slots(target_date, exclude_material=material_id)
         conflicts = find_conflicts(occupied, time)
+        ranked = rank_alternatives(
+            hours, occupied, time, preferences=self.store.rules_doc.get("preferences")
+        )
         return {
             "ok": True,
             "material_id": material_id,
@@ -237,7 +242,8 @@ class Toolbox:
             "time": time,
             "available": not conflicts,
             "conflicts": conflicts,
-            "alternatives": next_free_slots(hours, occupied, time),
+            "alternatives": [row["time"] for row in ranked],
+            "ranked_alternatives": ranked,
             "occupied_count": len(occupied),
         }
 

@@ -10,6 +10,7 @@ from src.policy import (
     evaluate_rules,
     find_conflicts,
     next_free_slots,
+    rank_alternatives,
     slot_grid,
 )
 from src.store import Store
@@ -63,6 +64,25 @@ class PolicyTest(unittest.TestCase):
         self.assertEqual([c["material_id"] for c in find_conflicts(occupied, "18:00")], ["M00"])
         self.assertEqual(find_conflicts(occupied, "19:00"), [])
         self.assertEqual(next_free_slots(self.store.operating_hours(), occupied, "18:00")[0], "19:00")
+
+    def test_ranked_alternatives_prefer_the_closest_free_slot(self) -> None:
+        hours = self.store.operating_hours()
+        occupied = self.store.occupied_slots()
+        ranked = rank_alternatives(hours, occupied, "18:00", preferences={"prefer_windows": [["18:00", "21:00"]]})
+        self.assertEqual(ranked[0]["time"], "19:00")
+        self.assertTrue(ranked[0]["recommended"])
+        self.assertTrue(all(row["reasons"][0].startswith("距请求时段 +") for row in ranked))
+        self.assertEqual([row["recommended"] for row in ranked].count(True), 1)
+        self.assertTrue(any("偏好时段 18:00–21:00" in reason for reason in ranked[0]["reasons"]))
+
+    def test_min_gap_penalty_pushes_the_candidate_away_from_a_neighbour(self) -> None:
+        hours = self.store.operating_hours()
+        occupied = [{"time": "09:00", "material_id": "M02"}]
+        tight = rank_alternatives(hours, occupied, "09:00", preferences={"min_gap_minutes": 60})
+        loose = rank_alternatives(hours, occupied, "09:00", preferences={})
+        self.assertEqual(loose[0]["time"], "09:30")
+        self.assertEqual(tight[0]["time"], "10:00")
+        self.assertTrue(any("只隔 30 分钟" in reason for reason in tight[1]["reasons"]))
 
 
 if __name__ == "__main__":

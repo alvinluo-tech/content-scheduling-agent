@@ -53,6 +53,15 @@ class ToolboxTest(unittest.TestCase):
         self.assertFalse(result["published"])
         self.assertFalse(result["deduplicated"])
 
+    def test_slot_query_explains_why_a_slot_is_recommended(self) -> None:
+        slot = self.toolbox.call("query_time_slot", {"material_id": "M01", "time": "18:00", "reason": "查冲突与替代"})
+        ranked = slot["ranked_alternatives"]
+        self.assertEqual([row["time"] for row in ranked], slot["alternatives"])
+        self.assertEqual(ranked[0]["time"], "19:00")
+        self.assertTrue(ranked[0]["recommended"])
+        self.assertTrue(any("偏好时段" in reason for reason in ranked[0]["reasons"]))
+        self.assertIn("首选 19:00", self.toolbox.summary_of("query_time_slot", slot))
+
     def test_duplicate_submission_is_deduplicated(self) -> None:
         self.read_and_check("M01")
         self.toolbox.call(

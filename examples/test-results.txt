@@ -20,8 +20,10 @@ test_save_failure_is_reported_as_not_saved (tests.test_markdown.MarkdownReportTe
 test_step_limit_report_lists_unfinished_materials (tests.test_markdown.MarkdownReportTest.test_step_limit_report_lists_unfinished_materials) ... ok
 test_banned_term_is_risk (tests.test_policy.PolicyTest.test_banned_term_is_risk) ... ok
 test_conflict_and_alternatives (tests.test_policy.PolicyTest.test_conflict_and_alternatives) ... ok
+test_min_gap_penalty_pushes_the_candidate_away_from_a_neighbour (tests.test_policy.PolicyTest.test_min_gap_penalty_pushes_the_candidate_away_from_a_neighbour) ... ok
 test_missing_info_blocks_drafting (tests.test_policy.PolicyTest.test_missing_info_blocks_drafting) ... ok
 test_pass_material_is_draftable (tests.test_policy.PolicyTest.test_pass_material_is_draftable) ... ok
+test_ranked_alternatives_prefer_the_closest_free_slot (tests.test_policy.PolicyTest.test_ranked_alternatives_prefer_the_closest_free_slot) ... ok
 test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_grid_matches_operating_hours) ... ok
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
@@ -54,10 +56,11 @@ test_other_material_draft_occupies_slot (tests.test_tools.ToolboxTest.test_other
 test_own_draft_does_not_conflict_with_itself (tests.test_tools.ToolboxTest.test_own_draft_does_not_conflict_with_itself) ... ok
 test_review_not_passed_blocks_saving (tests.test_tools.ToolboxTest.test_review_not_passed_blocks_saving) ... ok
 test_save_failure_is_reported_not_hidden (tests.test_tools.ToolboxTest.test_save_failure_is_reported_not_hidden) ... ok
+test_slot_query_explains_why_a_slot_is_recommended (tests.test_tools.ToolboxTest.test_slot_query_explains_why_a_slot_is_recommended) ... ok
 test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered) ... ok
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 55 tests in 6.545s
+Ran 58 tests in 7.729s
 
 OK
