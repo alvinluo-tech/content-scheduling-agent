@@ -98,6 +98,9 @@
 - 实时推送走观察者而不是轮询：`TraceRecorder` 每 `record()` / `close()` 一次就把 `deepcopy(steps)` 交给监听器，
   `GET /api/stream` 把监听器塞进队列、用 SSE 逐条写出，最后补一条 `report` 事件。图本身不知道有 Web 这回事。
 - 前端只做渲染与状态映射：`review_status` / `outcome` / `draft.status` 逐个映射成中文标签，未映射的值不做猜测。
+- 界面里手填的请求（`POST /api/custom`）同样不另开一条路：先用 CLI 那个 `validate_run()` 校验，
+  再登记成 `custom-N`，之后仍需经过 `GET /api/stream` → `run_pipeline()`。所以从界面填的请求不会绕开
+  工具护栏，也不会因为"人手填的"就放宽冲突判断；登记的请求只活在进程内存里，重启即消失。
 - 边界：本地单机、无鉴权，只用于演示；CLI 仍是主入口，Web 不新增任何业务决策。
 
 ## 频道之间为什么互不占位
