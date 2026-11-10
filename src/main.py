@@ -16,6 +16,7 @@ from .report import build_report
 from .store import Store, atomic_write_json
 from .tools import Toolbox
 from .trace import TraceRecorder
+from .validation import validate_run
 
 DEFAULT_MAX_STEPS = 20
 
@@ -116,6 +117,7 @@ def _apply_decision(store: Store, raw: str, action: str) -> dict[str, Any]:
 
 def run_once(args: argparse.Namespace) -> dict[str, Any]:
     run: dict[str, Any] = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    validate_run(run)
     apply_approvals(args)
     report, trace_dict = run_pipeline(
         run,
