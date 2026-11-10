@@ -77,8 +77,13 @@ test_save_failure_is_reported_not_hidden (tests.test_tools.ToolboxTest.test_save
 test_slot_query_explains_why_a_slot_is_recommended (tests.test_tools.ToolboxTest.test_slot_query_explains_why_a_slot_is_recommended) ... ok
 test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered) ... ok
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
+test_bad_max_steps_is_refused (tests.test_validation.ValidationTest.test_bad_max_steps_is_refused) ... ok
+test_business_errors_are_not_rejected_here (tests.test_validation.ValidationTest.test_business_errors_are_not_rejected_here) ... ok
+test_duplicate_material_is_refused_with_both_positions (tests.test_validation.ValidationTest.test_duplicate_material_is_refused_with_both_positions) ... ok
+test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inputs_pass) ... ok
+test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 74 tests in 7.349s
+Ran 79 tests in 5.854s
 
 OK

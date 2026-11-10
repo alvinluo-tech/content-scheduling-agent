@@ -119,7 +119,7 @@ src/        store / policy / tools / models / graph / trace / report / markdown 
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   9 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      74 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子）
+tests/      79 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```
@@ -130,5 +130,6 @@ docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + image
 - 草稿账本默认 `data/drafts.json`，可用 `--ledger` 指向别处；重跑前可用 `scripts/run_examples.py` 自动重置。
 - 账本写入是「锁 → 重读 → 改 → 原子替换」（锁文件 `<ledger>.json.lock`），CLI 与 Web 同时跑也不会丢更新；锁等不到 10 秒会明确报 `LEDGER_BUSY`，不假装写成功。
 - 数据全部为合成数据，无真实用户/素材信息，无真实密钥入库。
+- 入口只拦结构性错误的输入（重复素材、缺时间要求），业务性的不可行（时间不在网格、日期/频道没配置）交给工具回报给模型；错误输入退出码为 2。
 - 改期只能由人拍板：`--approve` / `--reject` / `--replan`（或 `/api/confirm` / `/api/reject`，`/api/reject` 带 `time` 即为改选）；否决后同一方案会被 `CONFIRMATION_REJECTED` 挡住。
 - 日期与频道都只覆盖 `schedule.json` 里配置过的（示例给到 2026-11-15 与 `main` / `shorts`）；没有频道级的规则差异与流量/负载优化。

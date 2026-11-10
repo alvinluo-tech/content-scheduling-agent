@@ -15,6 +15,7 @@
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具、替代时段的推荐理由随工具结果返回 |
 | 图级 | `tests/test_agent_flow.py` | 9 个用例端到端、多日冲突只在自己那一天待确认、频道冲突只在自己那一个频道待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件 |
+| 输入层 | `tests/test_validation.py` | 6 个示例输入全部通过、同一素材重复出现时点名两条位置、缺 `requested_time` 时说明「不会替用户猜」、越界时间与未配置的日期/频道**不**在入口拦（留给工具）、`max_steps` 非正数被拒 |
 | 账本层 | `tests/test_store.py` | 两个实例各自写不互相覆盖（旧实现会从 2 份掉到 1 份）、别处写的确认项不被后来的草稿覆盖、锁被占用时等满超时报 `LedgerBusy` 且释放后照常可用 |
 | 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
 

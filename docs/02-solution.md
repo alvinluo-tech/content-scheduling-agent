@@ -63,6 +63,13 @@
 `agent` 节点入口先判 `steps >= max_steps`，达到上限直接返回 `terminal=step_limit_reached` 且**不再调用模型**。
 上限优先级：`--max-steps` > 输入 `options.max_steps` > 环境变量 `MAX_STEPS` > 20。
 
+## 输入校验只拦"模型也修不了的输入"
+`src/validation.py` 在入口拒三类结构性错误：`requests` 不是非空列表、请求缺 `material_id` 或 `requested_time`、
+同一素材出现在两条请求里（一次性要求两个发布时间要求，只能由人合并）。这三种模型查什么工具都补不出来，
+早停比让它绕 20 步更诚实（CLI 退出码 2，stderr 是 `{"status":"error",...}`）。
+反过来，`25:99` 这种时间、没配置过的日期与频道**不在这里拦**——它们要成为 `BAD_TIME` / `DATE_NOT_AVAILABLE` /
+`CHANNEL_NOT_AVAILABLE` 回到模型眼前，因为"按用户要求查了、发现不可行、然后请求确认"正是这个 Agent 该做的动作。
+
 ## 账本为什么需要跨进程锁
 原子替换（`mkstemp` + `os.replace`）只保证文件不会写坏，挡不住丢更新：Web 演示层与 CLI 各持一份内存快照，
 谁先读谁后写，后写的那次会整份覆盖前一次。所以 `Store` 把写入收进 `transaction()`：先对 `<ledger>.json.lock`
