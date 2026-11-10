@@ -27,6 +27,8 @@ test_reset_clears_ledger (tests.test_server.ServerTestCase.test_reset_clears_led
 test_run_conflict_case_saves_draft_without_publishing (tests.test_server.ServerTestCase.test_run_conflict_case_saves_draft_without_publishing) ... ok
 test_state_endpoint_describes_the_workbench (tests.test_server.ServerTestCase.test_state_endpoint_describes_the_workbench) ... ok
 test_static_css_is_served_with_right_content_type (tests.test_server.ServerTestCase.test_static_css_is_served_with_right_content_type) ... ok
+test_stream_pushes_steps_before_the_final_report (tests.test_server.ServerTestCase.test_stream_pushes_steps_before_the_final_report) ... ok
+test_stream_rejects_unknown_case_before_opening_stream (tests.test_server.ServerTestCase.test_stream_rejects_unknown_case_before_opening_stream) ... ok
 test_unknown_api_is_404 (tests.test_server.ServerTestCase.test_unknown_api_is_404) ... ok
 test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_case_is_rejected) ... ok
 test_unknown_confirmation_is_rejected (tests.test_server.ServerTestCase.test_unknown_confirmation_is_rejected) ... ok
@@ -44,6 +46,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 42 tests in 3.211s
+Ran 44 tests in 2.906s
 
 OK

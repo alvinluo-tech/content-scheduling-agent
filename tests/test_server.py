@@ -96,6 +96,43 @@ class ServerTestCase(unittest.TestCase):
             self.assertTrue(step["rationale"])
             self.assertIn("ok", step["observation"])
 
+    def stream(self, path: str):
+        """把 SSE 响应读成 [(event, payload)]，读完即连接关闭。"""
+        events = []
+        with urlopen(self.base + path, timeout=60) as resp:
+            self.assertEqual(resp.status, 200)
+            self.assertIn("text/event-stream", resp.headers.get("Content-Type", ""))
+            name, payload = None, None
+            for raw in resp:
+                line = raw.decode("utf-8").rstrip("\r\n")
+                if line.startswith("event: "):
+                    name = line[len("event: "):]
+                elif line.startswith("data: "):
+                    payload = json.loads(line[len("data: "):])
+                elif line == "" and name:
+                    events.append((name, payload))
+                    name, payload = None, None
+        return events
+
+    def test_stream_pushes_steps_before_the_final_report(self) -> None:
+        events = self.stream("/api/stream?case=02-conflict&offline=1&reset=1")
+        names = [name for name, _ in events]
+        self.assertEqual(names[0], "meta")
+        self.assertEqual(names[-1], "report")
+        snapshots = [payload for name, payload in events if name == "trace"]
+        self.assertGreaterEqual(len(snapshots), 3)
+        self.assertEqual(len(snapshots[0]["steps"]), 1)
+        self.assertGreater(snapshots[-1]["steps"][-1]["step"], 1)
+        report_event = events[-1][1]
+        self.assertEqual(report_event["report"]["outcome"], "pending_confirmation")
+        self.assertFalse(report_event["report"]["published"])
+        self.assertIn("drafts", report_event["state"])
+
+    def test_stream_rejects_unknown_case_before_opening_stream(self) -> None:
+        status, body = self.get("/api/stream?case=99-nope")
+        self.assertEqual(status, 400)
+        self.assertIn("未知场景", json.loads(body.decode("utf-8"))["error"])
+
     def test_unknown_case_is_rejected(self) -> None:
         status, body = self.post("/api/run", {"case": "99-nope"})
         self.assertEqual(status, 400)

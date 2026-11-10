@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+import copy
+from typing import Any, Callable
+
+TraceListener = Callable[[dict[str, Any]], None]
 
 
 class TraceRecorder:
@@ -8,6 +11,9 @@ class TraceRecorder:
 
     step 编号 = 模型决策轮次（与报告里的 limits.steps_used 同口径），
     同一轮里模型并行发出的多个工具调用共享同一步号，因此 trace 条目数可能多于步数。
+
+    监听器（Web 演示层的 SSE 用它做实时推送）拿到的是深拷贝快照：录完一步推一次，
+    UI 因此能边跑边看到决策，而不是等整轮结束才刷出来。
     """
 
     def __init__(self, run_id: str, mode: str, model_name: str) -> None:
@@ -17,6 +23,17 @@ class TraceRecorder:
         self.steps: list[dict[str, Any]] = []
         self.final_message: str | None = None
         self.terminal = "running"
+        self._listeners: list[TraceListener] = []
+
+    def add_listener(self, listener: TraceListener) -> None:
+        self._listeners.append(listener)
+
+    def _emit(self) -> None:
+        if not self._listeners:
+            return
+        payload = {"type": "trace", "terminal": self.terminal, "steps": copy.deepcopy(self.steps)}
+        for listener in self._listeners:
+            listener(payload)
 
     def record(self, step: int, tool: str, args: dict[str, Any], result: dict[str, Any], summary: str) -> None:
         if self.steps:
@@ -29,12 +46,14 @@ class TraceRecorder:
                 "observation": {"ok": bool(result.get("ok")), "summary": summary},
             }
         )
+        self._emit()
 
     def close(self, terminal: str, final_message: str | None = None) -> None:
         self.terminal = terminal
         if self.steps:
             self.steps[-1]["next_action"] = "结束并输出排期结果"
         self.final_message = final_message
+        self._emit()
 
     def as_dict(self, limits: dict[str, Any]) -> dict[str, Any]:
         return {

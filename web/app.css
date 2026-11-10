@@ -96,6 +96,14 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 .panel-title em {
   font: 400 11px/1.4 var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink-3);
 }
+/* 流式执行中：右栏标题变为朱红并带一个呼吸点，提示“现在还在跑” */
+.panel-title em.live { color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+.panel-title em.live::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+@keyframes live-pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .panel-title em.live::before { animation: none; opacity: 0.8; } }
 
 /* ---------- cases ---------- */
 .cases-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
@@ -281,6 +289,9 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 /* ---------- trace ---------- */
 .trace-panel { border-bottom: 0; }
 .trace { list-style: none; padding: 0; display: flex; flex-direction: column; }
+/* 新一轮运行中：上一轮结论压暗，避免被当成当前结果 */
+#results.stale { opacity: 0.32; transition: opacity 160ms ease; }
+
 .step { padding: 10px 0 11px; border-bottom: 1px dotted var(--rule); }
 .step:last-child { border-bottom: 0; }
 .step-head { display: flex; align-items: baseline; gap: 7px; }

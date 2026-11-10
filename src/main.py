@@ -5,7 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from langchain_core.messages import HumanMessage
 
@@ -45,6 +45,7 @@ def run_pipeline(
     max_steps: int | None = None,
     offline: bool = False,
     run_id: str | None = None,
+    on_trace_event: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """跑一遍图，返回 (报告, 轨迹)。CLI 与 Web 演示层共用这一条路径，避免两套行为。"""
     store = Store(data_dir, ledger)
@@ -54,6 +55,8 @@ def run_pipeline(
     llm = build_chat_model(mode, run)
     model_name = getattr(llm, "model_name", None) or getattr(llm, "mode", mode)
     trace = TraceRecorder(run.get("run_id") or run_id or "run", mode, str(model_name))
+    if on_trace_event is not None:
+        trace.add_listener(on_trace_event)
     system_text = build_system_prompt(run, store.schedule_date(), store.operating_hours())
     graph = build_agent_graph(llm, toolbox, trace, steps, system_text)
     state = graph.invoke(

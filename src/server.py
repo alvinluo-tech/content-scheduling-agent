@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import queue
 import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qsl, unquote, urlparse
 
 from .main import load_env, run_pipeline
 from .store import Store
@@ -105,14 +106,18 @@ def _ledger_label() -> str:
         return str(LEDGER_PATH)
 
 
-def run_case(body: dict[str, Any]) -> dict[str, Any]:
-    case = str(body.get("case") or "")
+def read_case_input(case: str) -> dict[str, Any]:
+    """把示例输入读成一次运行请求；场景名必须在白名单里。"""
     if case not in {item["file"] for item in CASE_META}:
         raise ValueError("未知场景：" + (case or "(空)"))
+    return json.loads((EXAMPLES_DIR / (case + ".input.json")).read_text(encoding="utf-8"))
+
+
+def run_case(body: dict[str, Any]) -> dict[str, Any]:
+    case = str(body.get("case") or "")
+    run = read_case_input(case)
     if body.get("reset"):
         LEDGER_PATH.unlink(missing_ok=True)
-    source = EXAMPLES_DIR / (case + ".input.json")
-    run = json.loads(source.read_text(encoding="utf-8"))
     max_steps = body.get("max_steps")
     report, trace = run_pipeline(
         run,
@@ -161,8 +166,68 @@ class Handler(BaseHTTPRequestHandler):
         ctype = CONTENT_TYPES.get(target.suffix.lower(), "application/octet-stream")
         self._send(200, target.read_bytes(), ctype)
 
+    def _sse(self, event: str, payload: dict[str, Any]) -> None:
+        chunk = "event: " + event + "\ndata: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
+        self.wfile.write(chunk.encode("utf-8"))
+        self.wfile.flush()
+
+    def stream_case(self, params: dict[str, str]) -> None:
+        """边跑边推：每录完一步发一条 trace 事件，最后发 report。"""
+        case = str(params.get("case") or "")
+        try:
+            run = read_case_input(case)
+        except ValueError as exc:
+            self._json(400, {"status": "error", "error": str(exc)})
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        events: queue.Queue[dict[str, Any]] = queue.Queue()
+        try:
+            self._sse("meta", {"case": case})
+            with RUN_LOCK:
+                if params.get("reset") in ("1", "true", "yes"):
+                    LEDGER_PATH.unlink(missing_ok=True)
+                max_steps = params.get("max_steps") or None
+
+                def worker() -> None:
+                    try:
+                        report, trace = run_pipeline(
+                            run,
+                            data_dir=DATA_DIR,
+                            ledger=LEDGER_PATH,
+                            max_steps=int(max_steps) if max_steps else None,
+                            offline=params.get("offline") in (None, "", "1", "true", "yes"),
+                            run_id=case,
+                            on_trace_event=events.put,
+                        )
+                        events.put({"type": "report", "case": case, "report": report, "trace": trace, "state": snapshot()})
+                    except Exception as exc:
+                        traceback.print_exc()
+                        events.put({"type": "failed", "error": str(exc) or exc.__class__.__name__})
+
+                thread = threading.Thread(target=worker, daemon=True)
+                thread.start()
+                while True:
+                    event = events.get()
+                    if event.get("type") == "report":
+                        self._sse("report", event)
+                        break
+                    if event.get("type") == "failed":
+                        self._sse("failed", event)
+                        break
+                    self._sse("trace", event)
+                thread.join(timeout=5)
+        except (BrokenPipeError, ConnectionResetError):
+            return
+
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/stream":
+            self.stream_case(dict(parse_qsl(urlparse(self.path).query)))
+            return
         if path == "/api/state":
             self._json(200, {"status": "ok", "state": snapshot()})
             return

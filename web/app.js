@@ -52,6 +52,8 @@
   var selected = "02-conflict";
   var state = null;
   var running = false;
+  var stream = null;
+  var finished = false;
 
   function $(id) { return document.getElementById(id); }
 
@@ -363,6 +365,7 @@
   function renderTrace(trace, report) {
     var root = $("trace");
     clear(root);
+    $("trace-limits").classList.remove("live");
     if (!trace) {
       $("trace-limits").textContent = "未运行";
       root.appendChild(el("li", "trace-empty", "还没有决策记录"));
@@ -370,23 +373,37 @@
     }
     var limits = (report && report.limits) || trace.limits || {};
     $("trace-limits").textContent = "步数 " + text(limits.steps_used) + "/" + text(limits.max_steps) + " · 工具 " + text(limits.tool_calls);
-    (trace.steps || []).forEach(function (step) {
-      var li = el("li", "step");
-      var head = el("div", "step-head");
-      head.appendChild(el("span", "step-no", String(step.step)));
-      head.appendChild(el("span", "step-tool", text(step.action && step.action.tool)));
-      var ok = step.observation && step.observation.ok;
-      head.appendChild(el("span", "step-ok tone-" + (ok ? "pass" : "block"), ok ? "OK" : "FAIL"));
-      li.appendChild(head);
-      if (step.rationale) { li.appendChild(el("p", "step-why", step.rationale)); }
-      li.appendChild(el("p", "step-obs", text(step.observation && step.observation.summary)));
-      if (step.next_action) { li.appendChild(el("p", "step-next", step.next_action)); }
-      var args = el("details", "args");
-      args.appendChild(el("summary", null, "工具参数"));
-      args.appendChild(el("pre", null, JSON.stringify((step.action && step.action.args) || {}, null, 2)));
-      li.appendChild(args);
-      root.appendChild(li);
-    });
+    (trace.steps || []).forEach(function (step) { root.appendChild(stepItem(step)); });
+  }
+
+  function stepItem(step) {
+    var li = el("li", "step");
+    var head = el("div", "step-head");
+    head.appendChild(el("span", "step-no", String(step.step)));
+    head.appendChild(el("span", "step-tool", text(step.action && step.action.tool)));
+    var ok = step.observation && step.observation.ok;
+    head.appendChild(el("span", "step-ok tone-" + (ok ? "pass" : "block"), ok ? "OK" : "FAIL"));
+    li.appendChild(head);
+    if (step.rationale) { li.appendChild(el("p", "step-why", step.rationale)); }
+    li.appendChild(el("p", "step-obs", text(step.observation && step.observation.summary)));
+    if (step.next_action) { li.appendChild(el("p", "step-next", step.next_action)); }
+    var args = el("details", "args");
+    args.appendChild(el("summary", null, "工具参数"));
+    args.appendChild(el("pre", null, JSON.stringify((step.action && step.action.args) || {}, null, 2)));
+    li.appendChild(args);
+    return li;
+  }
+
+  /* SSE 中途推来的快照：逐步追加，让演示能看到“先查了什么、再改了什么”。 */
+  function renderLiveTrace(steps, terminal) {
+    var root = $("trace");
+    clear(root);
+    $("trace-limits").classList.add("live");
+    $("trace-limits").textContent = "执行中 · 已产生 " + steps.length + " 条决策记录";
+    steps.forEach(function (step) { root.appendChild(stepItem(step)); });
+    if (terminal && terminal !== "running") {
+      root.appendChild(el("li", "trace-empty", "已收尾：" + text(terminal)));
+    }
   }
 
   /* ---------- actions ---------- */
@@ -416,31 +433,63 @@
     if (box) { box.hidden = true; }
   }
 
+  function closeStream() {
+    if (stream) { stream.close(); stream = null; }
+  }
+
   function run() {
     if (running) { return; }
     hideError();
+    closeStream();
+    finished = false;
     setRunning(true);
     var offline = $("offline").checked;
     renderEnv(offline);
-    var body = {
+    var params = new URLSearchParams({
       case: selected,
-      offline: offline,
-      reset: $("reset-ledger").checked,
-      max_steps: $("max-steps").value || null
-    };
-    fetchJSON("/api/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    }).then(function (payload) {
+      offline: offline ? "1" : "0",
+      reset: $("reset-ledger").checked ? "1" : "0"
+    });
+    var maxSteps = $("max-steps").value;
+    if (maxSteps) { params.set("max_steps", maxSteps); }
+
+    $("empty").hidden = true;
+    $("results").hidden = false;
+    $("results").classList.add("stale");  // 上一轮的结论先压暗，别让人误以为是新的
+    clear($("trace"));
+    $("trace-limits").classList.add("live");
+    $("trace-limits").textContent = "等待模型第一步…";
+
+    var source = new EventSource("/api/stream?" + params.toString());
+    stream = source;
+    source.addEventListener("trace", function (event) {
+      var payload = JSON.parse(event.data);
+      renderLiveTrace(payload.steps || [], payload.terminal);
+    });
+    source.addEventListener("report", function (event) {
+      var payload = JSON.parse(event.data);
+      finished = true;
       state = payload.state;
       renderMeta(state);
       renderReport(payload.report, payload.trace);
-    }).catch(function (err) {
-      showError(err.message || String(err));
-    }).then(function () {
+      $("results").classList.remove("stale");
+      closeStream();
       setRunning(false);
     });
+    source.addEventListener("failed", function (event) {
+      var payload = JSON.parse(event.data);
+      finished = true;
+      closeStream();
+      setRunning(false);
+      showError(payload.error || "运行失败");
+    });
+    source.onerror = function () {
+      if (finished) { return; }
+      finished = true;
+      closeStream();
+      setRunning(false);
+      showError("与服务器的连接中断");
+    };
   }
 
   /* 人工确认走 /api/confirm：模型工具集里没有这个动作，只有人点这一下才算同意。 */

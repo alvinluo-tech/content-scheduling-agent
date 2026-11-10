@@ -60,11 +60,15 @@ CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的
 「离线 Mock」勾选状态与 CLI 的 `--offline` 对应，取消勾选才走真实模型。演示账本写到 `.runtime/ledger.json`，
 不污染 `data/drafts.json`。
 
+界面走的是 SSE（`GET /api/stream`）：`TraceRecorder` 每录一步就把快照推给浏览器，所以真实模型那种十几秒的运行
+能看到决策一条条长出来，而不是转圈结束才一次性刷出结果。上一轮结论在新一轮跑完前压暗显示，避免被误读成当前结果。
+
 ![时段冲突场景](docs/images/web-02-conflict.png)
 
 截图：`docs/images/web-02-conflict.png`（冲突→待确认）、`web-03-rules.png`（信息缺失 + 规则风险）、
 `web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）、
-`web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）。
+`web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）、
+`web-02-conflict-streaming.png`（真实模型运行中的一帧：右栏逐条推送，中间上一轮结论压暗）。
 
 ## 评审入口（按题面验收点）
 
@@ -87,7 +91,7 @@ src/        store / policy / tools / models / graph / trace / report / main / se
 data/       合成素材、审核规则、已有排期、草稿账本
 examples/   6 个用例的输入 + 实际输出 + trace + test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      40 个 unittest（规则、工具守卫、图级链路、trace 结构、HTTP 接口）
+tests/      44 个 unittest（规则、工具守卫、图级链路、trace 结构、HTTP 接口 / SSE 推送）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```

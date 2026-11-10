@@ -66,6 +66,8 @@
 `src/server.py` + `web/` 只是同一张图的展示壳：HTTP 处理函数校验场景名后调用 `src/main.py` 的 `run_pipeline()`，
 拿到的 `report` 与 `trace` 与 CLI 完全同构，三条红线一行都没有绕过。
 - 演示账本固定写到 `.runtime/ledger.json`（已 gitignore），不污染 `data/drafts.json`，避免"点一下演示就改了提交记录"。
+- 实时推送走观察者而不是轮询：`TraceRecorder` 每 `record()` / `close()` 一次就把 `deepcopy(steps)` 交给监听器，
+  `GET /api/stream` 把监听器塞进队列、用 SSE 逐条写出，最后补一条 `report` 事件。图本身不知道有 Web 这回事。
 - 前端只做渲染与状态映射：`review_status` / `outcome` / `draft.status` 逐个映射成中文标签，未映射的值不做猜测。
 - 边界：本地单机、无鉴权，只用于演示；CLI 仍是主入口，Web 不新增任何业务决策。
 
