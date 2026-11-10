@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+from pathlib import Path
+from typing import Any
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def draft_key(date: str, material_id: str, requested_time: str) -> str:
+    return f"{date}|{material_id}|{requested_time}"
+
+
+class Store:
+    """只负责读取合成资料与持久化草稿账本，不含任何业务判断。"""
+
+    def __init__(self, data_dir: Path | str, ledger_path: Path | str | None = None) -> None:
+        self.data_dir = Path(data_dir)
+        self.ledger_path = Path(ledger_path) if ledger_path else self.data_dir / "drafts.json"
+        self.materials: dict[str, dict[str, Any]] = read_json(self.data_dir / "materials.json")
+        self.rules_doc: dict[str, Any] = read_json(self.data_dir / "rules.json")
+        self.schedule_doc: dict[str, Any] = read_json(self.data_dir / "schedule.json")
+        ledger: dict[str, Any] = read_json(self.ledger_path) if self.ledger_path.exists() else {}
+        self.drafts: dict[str, dict[str, Any]] = ledger.get("drafts", {})
+        self.confirmations: dict[str, dict[str, Any]] = ledger.get("confirmations", {})
+
+    def material(self, material_id: str) -> dict[str, Any] | None:
+        return self.materials.get(material_id)
+
+    def rules(self) -> list[dict[str, Any]]:
+        return self.rules_doc["rules"]
+
+    def banned_terms(self) -> list[str]:
+        return self.rules_doc["banned_terms"]
+
+    def operating_hours(self) -> dict[str, Any]:
+        return self.rules_doc["operating_hours"]
+
+    def schedule_date(self) -> str:
+        return self.schedule_doc["date"]
+
+    def occupied_slots(self, date: str | None = None) -> list[dict[str, Any]]:
+        target = date or self.schedule_date()
+        if target != self.schedule_doc["date"]:
+            return []
+        return list(self.schedule_doc["slots"])
+
+    def draft(self, date: str, material_id: str, requested_time: str) -> dict[str, Any] | None:
+        return self.drafts.get(draft_key(date, material_id, requested_time))
+
+    def drafted_slots(self, date: str, exclude_material: str | None = None) -> list[dict[str, Any]]:
+        """草稿同样占位，避免同一时段排进两条素材；素材自己的草稿不算冲突（用于幂等重提）。"""
+        return [
+            {"time": draft["scheduled_time"], "material_id": draft["material_id"], "source": "draft"}
+            for draft in self.drafts.values()
+            if draft["date"] == date and draft["material_id"] != exclude_material
+        ]
+
+    def upsert_draft(self, record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        key = draft_key(record["date"], record["material_id"], record["requested_time"])
+        existing = self.drafts.get(key)
+        if existing is None:
+            self.drafts[key] = record
+            self.commit()
+            return record, True
+        existing["scheduled_time"] = record["scheduled_time"]
+        existing["status"] = record["status"]
+        existing["time_changed"] = record["time_changed"]
+        existing["updated_at"] = record["updated_at"]
+        existing["submit_count"] = existing.get("submit_count", 1) + 1
+        self.commit()
+        return existing, False
+
+    def add_confirmation(self, record: dict[str, Any]) -> dict[str, Any]:
+        self.confirmations[record["confirmation_id"]] = record
+        self.commit()
+        return record
+
+    def confirmations_for(self, date: str, material_id: str, requested_time: str) -> list[dict[str, Any]]:
+        return [
+            c for c in self.confirmations.values()
+            if c["date"] == date and c["material_id"] == material_id and c["requested_time"] == requested_time
+        ]
+
+    def commit(self) -> None:
+        atomic_write_json(self.ledger_path, {"drafts": self.drafts, "confirmations": self.confirmations})

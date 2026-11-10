@@ -1,0 +1,34 @@
+test_conflict_prerecorded_confirmation_is_reused (tests.test_agent_flow.AgentFlowTest.test_conflict_prerecorded_confirmation_is_reused) ... ok
+test_duplicate_submission_creates_one_draft (tests.test_agent_flow.AgentFlowTest.test_duplicate_submission_creates_one_draft) ... ok
+test_no_publish_tool_exists (tests.test_agent_flow.AgentFlowTest.test_no_publish_tool_exists) ... ok
+test_normal_schedule (tests.test_agent_flow.AgentFlowTest.test_normal_schedule) ... ok
+test_reference_instance_conflict (tests.test_agent_flow.AgentFlowTest.test_reference_instance_conflict)
+题面参考实例：M01 要求 18:00 被占用，19:00 可用 → 只能标记待确认，不能称已发布。 ... ok
+test_rules_risk_and_missing_info (tests.test_agent_flow.AgentFlowTest.test_rules_risk_and_missing_info) ... ok
+test_save_failure_is_reported_as_failure (tests.test_agent_flow.AgentFlowTest.test_save_failure_is_reported_as_failure) ... ok
+test_step_limit_enforced_from_cli_flag (tests.test_agent_flow.AgentFlowTest.test_step_limit_enforced_from_cli_flag) ... ok
+test_step_limit_returns_incomplete_status (tests.test_agent_flow.AgentFlowTest.test_step_limit_returns_incomplete_status) ... ok
+test_trace_schema (tests.test_agent_flow.AgentFlowTest.test_trace_schema) ... ok
+test_banned_term_is_risk (tests.test_policy.PolicyTest.test_banned_term_is_risk) ... ok
+test_conflict_and_alternatives (tests.test_policy.PolicyTest.test_conflict_and_alternatives) ... ok
+test_missing_info_blocks_drafting (tests.test_policy.PolicyTest.test_missing_info_blocks_drafting) ... ok
+test_pass_material_is_draftable (tests.test_policy.PolicyTest.test_pass_material_is_draftable) ... ok
+test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_grid_matches_operating_hours) ... ok
+test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
+test_confirmed_hard_time_change_saves_draft_without_publishing (tests.test_tools.ToolboxTest.test_confirmed_hard_time_change_saves_draft_without_publishing) ... ok
+test_duplicate_submission_is_deduplicated (tests.test_tools.ToolboxTest.test_duplicate_submission_is_deduplicated) ... ok
+test_hard_time_change_requires_confirmation (tests.test_tools.ToolboxTest.test_hard_time_change_requires_confirmation) ... ok
+test_material_outside_request_scope_is_rejected (tests.test_tools.ToolboxTest.test_material_outside_request_scope_is_rejected) ... ok
+test_missing_reason_is_rejected (tests.test_tools.ToolboxTest.test_missing_reason_is_rejected) ... ok
+test_occupied_slot_is_rejected (tests.test_tools.ToolboxTest.test_occupied_slot_is_rejected) ... ok
+test_other_material_draft_occupies_slot (tests.test_tools.ToolboxTest.test_other_material_draft_occupies_slot) ... ok
+test_own_draft_does_not_conflict_with_itself (tests.test_tools.ToolboxTest.test_own_draft_does_not_conflict_with_itself) ... ok
+test_review_not_passed_blocks_saving (tests.test_tools.ToolboxTest.test_review_not_passed_blocks_saving) ... ok
+test_save_failure_is_reported_not_hidden (tests.test_tools.ToolboxTest.test_save_failure_is_reported_not_hidden) ... ok
+test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered) ... ok
+test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 0.141s
+
+OK

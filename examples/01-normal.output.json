@@ -1,0 +1,57 @@
+{
+  "run_id": "case01-normal",
+  "date": "2026-11-12",
+  "status": "completed",
+  "completed": true,
+  "outcome": "scheduled",
+  "model": {
+    "mode": "offline",
+    "name": "offline-scripted"
+  },
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 5,
+    "tool_calls": 4
+  },
+  "summary": {
+    "total": 1,
+    "scheduled_draft": 1
+  },
+  "materials": [
+    {
+      "material_id": "M02",
+      "title": "新机开箱速览以及全场景续航实测说明",
+      "requested_time": "11:00",
+      "time_hard": true,
+      "review_status": "pass_with_warnings",
+      "risk_reasons": [
+        {
+          "rule_id": "R04",
+          "severity": "warning",
+          "reason": "标题超长，建议压缩后再排期（当前 17 字，上限 16）"
+        }
+      ],
+      "missing_fields": [],
+      "suggested_time": "11:00",
+      "time_changed": false,
+      "hard_time_preserved": true,
+      "requires_user_confirmation": false,
+      "pending_confirmations": [],
+      "draft": {
+        "draft_id": "D-M02-2026-11-12-1100",
+        "scheduled_time": "11:00",
+        "status": "draft_ready",
+        "submit_count": 1,
+        "published": false
+      },
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "scheduled_draft"
+    }
+  ],
+  "unfinished_materials": [],
+  "published": false,
+  "agent_summary": "离线 Mock 执行结束：共 4 次工具调用，其中草稿保存 1 次。本结果只验证流程正确性，不代表真实模型的决策质量。",
+  "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
+  "trace_file": "examples/01-normal.trace.json"
+}

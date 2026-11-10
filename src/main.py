@@ -1,0 +1,92 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+from langchain_core.messages import HumanMessage
+
+from .graph import build_agent_graph
+from .models import build_chat_model, build_system_prompt
+from .report import build_report
+from .store import Store, atomic_write_json
+from .tools import Toolbox
+from .trace import TraceRecorder
+
+DEFAULT_MAX_STEPS = 20
+
+
+def load_env() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(Path.cwd() / ".env")
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+
+def resolve_max_steps(cli_value: int | None, run: dict[str, Any]) -> int:
+    if cli_value is not None:
+        return cli_value
+    option = (run.get("options") or {}).get("max_steps")
+    if option is not None:
+        return int(option)
+    return int(os.environ.get("MAX_STEPS", DEFAULT_MAX_STEPS))
+
+
+def run_once(args: argparse.Namespace) -> dict[str, Any]:
+    run: dict[str, Any] = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    store = Store(args.data_dir, args.ledger)
+    toolbox = Toolbox(store, run)
+    max_steps = resolve_max_steps(args.max_steps, run)
+    mode = "offline" if args.offline else "deepseek"
+    llm = build_chat_model(mode, run)
+    model_name = getattr(llm, "model_name", None) or getattr(llm, "mode", mode)
+    trace = TraceRecorder(run.get("run_id", Path(args.input).stem), mode, str(model_name))
+    system_text = build_system_prompt(run, store.schedule_date(), store.operating_hours())
+    graph = build_agent_graph(llm, toolbox, trace, max_steps, system_text)
+    state = graph.invoke(
+        {"messages": [HumanMessage(content="请按系统提示处理本次排期请求。")], "steps": 0, "tool_calls": 0}
+    )
+    limits = {"max_steps": max_steps, "steps_used": state.get("steps", 0), "tool_calls": state.get("tool_calls", 0)}
+    report = build_report(run, store, toolbox, trace, limits)
+    if args.trace:
+        atomic_write_json(Path(args.trace), trace.as_dict(limits))
+        report["trace_file"] = str(args.trace)
+    if args.out:
+        atomic_write_json(Path(args.out), report)
+    return report
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="素材审核与发布排期 Agent（只保存草稿，不发布）")
+    parser.add_argument("--input", required=True, help="排期请求 JSON 文件路径")
+    parser.add_argument("--data-dir", default="data", help="合成资料目录（materials/rules/schedule）")
+    parser.add_argument("--ledger", default=None, help="草稿账本路径，默认 <data-dir>/drafts.json")
+    parser.add_argument("--out", default=None, help="把结果 JSON 写入该路径（同时仍打印到 stdout）")
+    parser.add_argument("--trace", default=None, help="把执行轨迹写入该路径")
+    parser.add_argument("--max-steps", type=int, default=None, help="模型-工具往返次数上限，达到即返回未完成状态")
+    parser.add_argument("--offline", action="store_true", help="离线 Mock 模式：只验证流程，不代表真实模型决策")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    load_env()
+    try:
+        report = run_once(args)
+    except FileNotFoundError as exc:
+        print(json.dumps({"status": "error", "error": f"输入文件不存在：{exc}"}, ensure_ascii=False), file=sys.stderr)
+        return 2
+    except (RuntimeError, json.JSONDecodeError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 2
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

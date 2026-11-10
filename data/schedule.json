@@ -1,0 +1,24 @@
+{
+  "$comment": "已有排期：M00 占 18:00，M05 占 18:30 —— 因此 19:00 是 18:00 之后第一个可用时段",
+  "date": "2026-11-12",
+  "timezone": "Asia/Shanghai",
+  "channel": "main",
+  "slots": [
+    {
+      "time": "10:00",
+      "material_id": "M02"
+    },
+    {
+      "time": "18:00",
+      "material_id": "M00"
+    },
+    {
+      "time": "18:30",
+      "material_id": "M05"
+    },
+    {
+      "time": "20:00",
+      "material_id": "M03"
+    }
+  ]
+}

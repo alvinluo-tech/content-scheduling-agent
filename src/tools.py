@@ -1,0 +1,329 @@
+from __future__ import annotations
+
+import inspect
+from datetime import datetime
+from typing import Any, Callable
+
+from .policy import evaluate_rules, find_conflicts, is_blank, next_free_slots, slot_grid, to_minutes
+from .store import Store
+
+REASON_PROP = {
+    "type": "string",
+    "description": "本次调用的决策依据：你观察到了什么、为什么现在调用这个工具（写入 trace，必填，一句话）",
+}
+
+TOOL_SPECS: list[dict[str, Any]] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_material",
+            "description": "读取素材元数据（标题、时长、封面、授权状态、品类等）。用于在审核或排期前确认素材到底有什么信息。",
+            "parameters": {
+                "type": "object",
+                "properties": {"material_id": {"type": "string", "description": "素材 ID，例如 M01"}, "reason": REASON_PROP},
+                "required": ["material_id", "reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_rules",
+            "description": "按审核规则检查素材，返回审核状态（pass / pass_with_warnings / risk / missing_info）、违规明细与缺失字段。是否允许保存草稿看 can_draft。",
+            "parameters": {
+                "type": "object",
+                "properties": {"material_id": {"type": "string", "description": "素材 ID"}, "reason": REASON_PROP},
+                "required": ["material_id", "reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_time_slot",
+            "description": "查询某天某个时间点是否可排：返回是否被占用、被谁占用，以及该时间点之后最近的 3 个可用时段。营业时段 09:00-21:00，30 分钟粒度；已保存的草稿同样占位。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "material_id": {"type": "string", "description": "为哪项素材查询时段（用于归因到该素材）"},
+                    "time": {"type": "string", "description": "HH:MM，例如 18:00"},
+                    "reason": REASON_PROP,
+                },
+                "required": ["material_id", "time", "reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "request_confirmation",
+            "description": "登记一条待用户确认的事项（例如把硬性发布时间从 18:00 改到 19:00）。登记不等于用户已确认；未确认前不得表述为已排期、已确认或已发布。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "material_id": {"type": "string", "description": "素材 ID"},
+                    "proposed_time": {"type": "string", "description": "建议的替代时段 HH:MM"},
+                    "question": {"type": "string", "description": "要用户拍板的问题，一句话"},
+                    "reason": REASON_PROP,
+                },
+                "required": ["material_id", "proposed_time", "question", "reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_draft",
+            "description": "只保存排期草稿，不发布。相同请求（同素材同时段要求）重复保存只会产生一份草稿；把硬性要求的时间改掉前必须先 request_confirmation；审核未通过的素材不允许保存。返回 published 恒为 false。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "material_id": {"type": "string", "description": "素材 ID"},
+                    "scheduled_time": {"type": "string", "description": "拟排期时段 HH:MM"},
+                    "reason": REASON_PROP,
+                },
+                "required": ["material_id", "scheduled_time", "reason"],
+            },
+        },
+    },
+]
+
+
+def _err(code: str, message: str, *, recoverable: bool = True, hint: str | None = None) -> dict[str, Any]:
+    error: dict[str, Any] = {"code": code, "message": message, "recoverable": recoverable}
+    if hint:
+        error["hint"] = hint
+    return {"ok": False, "error": error}
+
+
+class Toolbox:
+    """5 个业务工具的真实实现：参数校验、业务守卫、调用账本。"""
+
+    def __init__(self, store: Store, run: dict[str, Any]) -> None:
+        self.store = store
+        self.run = run
+        self.date = store.schedule_date()
+        self.requests: dict[str, dict[str, Any]] = {r["material_id"]: r for r in run.get("requests", [])}
+        self.save_failures_left = int((run.get("simulate") or {}).get("save_failures", 0))
+        self.fixed_now = run.get("now")
+        self.calls: list[dict[str, Any]] = []
+        self.attempts: dict[str, int] = {}
+
+    def clock(self) -> str:
+        return self.fixed_now or datetime.now().astimezone().isoformat(timespec="seconds")
+
+    def handlers(self) -> dict[str, Callable[..., dict[str, Any]]]:
+        return {
+            "read_material": self.read_material,
+            "check_rules": self.check_rules,
+            "query_time_slot": self.query_time_slot,
+            "request_confirmation": self.request_confirmation,
+            "save_draft": self.save_draft,
+        }
+
+    def call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+        handler = self.handlers().get(name)
+        if handler is None:
+            result = _err("UNKNOWN_TOOL", f"未注册的工具 {name}，可用工具：{sorted(self.handlers())}", recoverable=False)
+        else:
+            try:
+                inspect.signature(handler).bind(**args)
+            except TypeError as exc:
+                result = _err("BAD_ARGUMENTS", f"{name} 参数不合法：{exc}", hint="按工具 schema 重新构造参数")
+            else:
+                try:
+                    result = handler(**args)
+                except Exception as exc:  # 工具内部异常必须变成可观察结果，而不是中断执行
+                    result = _err("TOOL_CRASH", f"{name} 内部异常：{type(exc).__name__}: {exc}", recoverable=False)
+        self.calls.append({"tool": name, "args": args, "ok": bool(result.get("ok")), "summary": self.summary_of(name, result)})
+        return result
+
+    def summary_of(self, name: str, result: dict[str, Any]) -> str:
+        if not result.get("ok"):
+            error = result.get("error", {})
+            return f"失败[{error.get('code')}] {error.get('message')}"
+        if name == "read_material":
+            material = result["material"]
+            missing = result["missing_required_fields"]
+            tail = f"，缺 {missing}" if missing else "，必填字段齐全"
+            return f"{material['id']} 标题《{material['title']}》{tail}"
+        if name == "check_rules":
+            ids = [v["rule_id"] for v in result["violations"]]
+            return f"审核 {result['review_status']}，命中规则 {ids or '无'}"
+        if name == "query_time_slot":
+            if result["available"]:
+                return f"{result['time']} 可用，后续可用时段 {result['alternatives']}"
+            return f"{result['time']} 被 {[c['material_id'] for c in result['conflicts']]} 占用，可用替代 {result['alternatives']}"
+        if name == "request_confirmation":
+            return f"待确认 {result['confirmation_id']} 已登记（{result['status']}）"
+        if name == "save_draft":
+            tag = "（重复提交，已去重）" if result["deduplicated"] else ""
+            return f"草稿 {result['draft_id']} {result['status']}{tag}，published={result['published']}"
+        return "ok"
+
+    def _material_and_request(self, material_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+        material = self.store.material(material_id)
+        if material is None:
+            return None, None, _err("MATERIAL_NOT_FOUND", f"素材 {material_id} 不存在", recoverable=False, hint="向用户确认素材 ID，不要臆造素材")
+        request = self.requests.get(material_id)
+        if request is None:
+            return material, None, _err("NO_REQUEST", f"素材 {material_id} 不在本次排期请求中", recoverable=False)
+        return material, request, None
+
+    def read_material(self, material_id: str, reason: str) -> dict[str, Any]:
+        material, _, error = self._material_and_request(material_id)
+        if error:
+            return error
+        evaluation = evaluate_rules(material, self.store.rules_doc)
+        return {
+            "ok": True,
+            "material": material,
+            "missing_required_fields": evaluation["missing_fields"],
+            "present_fields": sorted(material.keys()),
+        }
+
+    def check_rules(self, material_id: str, reason: str) -> dict[str, Any]:
+        material, _, error = self._material_and_request(material_id)
+        if error:
+            return error
+        evaluation = evaluate_rules(material, self.store.rules_doc)
+        return {"ok": True, "material_id": material_id, **evaluation}
+
+    def query_time_slot(self, material_id: str, time: str, reason: str) -> dict[str, Any]:
+        if self.store.material(material_id) is None:
+            return _err("MATERIAL_NOT_FOUND", f"素材 {material_id} 不存在", recoverable=False)
+        hours = self.store.operating_hours()
+        grid = slot_grid(hours)
+        if time not in grid:
+            return _err(
+                "BAD_TIME",
+                f"{time} 不在营业时段 {hours['start']}-{hours['end']} 或不在 {hours['granularity_min']} 分钟网格上",
+                hint=f"可用网格示例：{grid[:4]}",
+            )
+        occupied = self.store.occupied_slots(self.date) + self.store.drafted_slots(self.date, exclude_material=material_id)
+        conflicts = find_conflicts(occupied, time)
+        return {
+            "ok": True,
+            "material_id": material_id,
+            "date": self.date,
+            "time": time,
+            "available": not conflicts,
+            "conflicts": conflicts,
+            "alternatives": next_free_slots(hours, occupied, time),
+            "occupied_count": len(occupied),
+        }
+
+    def request_confirmation(self, material_id: str, proposed_time: str, question: str, reason: str) -> dict[str, Any]:
+        _, request, error = self._material_and_request(material_id)
+        if error:
+            return error
+        confirmation_id = f"C-{material_id}-{self.date}-{proposed_time.replace(':', '')}"
+        existing = self.store.confirmations.get(confirmation_id)
+        if existing:
+            return {
+                "ok": True,
+                "confirmation_id": confirmation_id,
+                "status": existing["status"],
+                "deduplicated": True,
+                "requested_time": existing["requested_time"],
+                "proposed_time": existing["proposed_time"],
+                "note": "该待确认项已存在；用户确认前不得表述为已确认或已发布",
+            }
+        record = {
+            "confirmation_id": confirmation_id,
+            "date": self.date,
+            "material_id": material_id,
+            "requested_time": request["requested_time"],
+            "proposed_time": proposed_time,
+            "question": question,
+            "reason": reason,
+            "status": "pending",
+            "created_at": self.clock(),
+        }
+        self.store.add_confirmation(record)
+        return {
+            "ok": True,
+            "confirmation_id": confirmation_id,
+            "status": "pending",
+            "deduplicated": False,
+            "requested_time": request["requested_time"],
+            "proposed_time": proposed_time,
+            "note": "已登记待确认项；用户确认前该时段只能作为建议，不得表述为已确认或已发布",
+        }
+
+    def _save_should_fail(self) -> bool:
+        if self.save_failures_left == 0:
+            return False
+        if self.save_failures_left > 0:
+            self.save_failures_left -= 1
+        return True
+
+    def save_draft(self, material_id: str, scheduled_time: str, reason: str) -> dict[str, Any]:
+        material, request, error = self._material_and_request(material_id)
+        if error:
+            return error
+        evaluation = evaluate_rules(material, self.store.rules_doc)
+        if not evaluation["can_draft"]:
+            return _err(
+                "MATERIAL_NOT_READY",
+                f"素材 {material_id} 审核状态 {evaluation['review_status']}，命中 {[v['rule_id'] for v in evaluation['violations']]}，不得保存草稿",
+                recoverable=False,
+                hint="把阻断/缺失原因写进结论，或向用户请求补料；不要为了推进流程跳过审核",
+            )
+        hours = self.store.operating_hours()
+        if scheduled_time not in slot_grid(hours):
+            return _err("BAD_TIME", f"{scheduled_time} 不在营业时段或网格上", hint=f"{hours['start']}-{hours['end']}，{hours['granularity_min']} 分钟粒度")
+        requested_time = request["requested_time"]
+        time_changed = scheduled_time != requested_time
+        pending = [
+            c for c in self.store.confirmations_for(self.date, material_id, requested_time)
+            if c["proposed_time"] == scheduled_time and c["status"] == "pending"
+        ]
+        if time_changed and request.get("time_hard") and not pending:
+            return _err(
+                "HARD_CONSTRAINT_VIOLATION",
+                f"发布时间 {requested_time} 是用户硬性要求，改到 {scheduled_time} 必须先获得用户确认",
+                hint="先调用 request_confirmation 登记待确认项，再保存草稿",
+            )
+        occupied = self.store.occupied_slots(self.date) + self.store.drafted_slots(self.date, exclude_material=material_id)
+        conflicts = find_conflicts(occupied, scheduled_time)
+        if conflicts:
+            return _err(
+                "SLOT_CONFLICT",
+                f"{scheduled_time} 已被 {[c['material_id'] for c in conflicts]} 占用",
+                hint="用 query_time_slot 查替代时段，不要占用已有排期",
+            )
+        if self._save_should_fail():
+            self.attempts[material_id] = self.attempts.get(material_id, 0) + 1
+            return _err(
+                "SAVE_FAILED",
+                "草稿保存服务返回失败（存储不可用）",
+                hint="可以重试；若仍失败必须如实报告保存失败，不得声称保存成功",
+            )
+        draft_id = f"D-{material_id}-{self.date}-{requested_time.replace(':', '')}"
+        record = {
+            "draft_id": draft_id,
+            "date": self.date,
+            "material_id": material_id,
+            "requested_time": requested_time,
+            "scheduled_time": scheduled_time,
+            "time_changed": time_changed,
+            "status": "draft_pending_confirmation" if (time_changed and request.get("time_hard")) else "draft_ready",
+            "reason": reason,
+            "submit_count": 1,
+            "updated_at": self.clock(),
+            "published": False,
+        }
+        stored, created = self.store.upsert_draft(record)
+        return {
+            "ok": True,
+            "draft_id": stored["draft_id"],
+            "material_id": material_id,
+            "requested_time": requested_time,
+            "scheduled_time": stored["scheduled_time"],
+            "time_changed": stored["time_changed"],
+            "status": stored["status"],
+            "deduplicated": not created,
+            "published": False,
+            "note": "仅保存草稿，未发布；待确认项仍需用户拍板",
+        }

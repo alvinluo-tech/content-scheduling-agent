@@ -1,0 +1,89 @@
+{
+  "run_id": "case03-rules-missing",
+  "date": "2026-11-12",
+  "status": "completed",
+  "completed": true,
+  "outcome": "failed",
+  "model": {
+    "mode": "offline",
+    "name": "offline-scripted"
+  },
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 6,
+    "tool_calls": 5
+  },
+  "summary": {
+    "total": 2,
+    "needs_info": 1,
+    "blocked": 1
+  },
+  "materials": [
+    {
+      "material_id": "M03",
+      "title": "联名礼盒预告",
+      "requested_time": "12:00",
+      "time_hard": false,
+      "review_status": "missing_info",
+      "risk_reasons": [
+        {
+          "rule_id": "R01",
+          "severity": "blocking",
+          "reason": "缺少时长，无法评估排期与切片（缺 duration_sec）"
+        },
+        {
+          "rule_id": "R02",
+          "severity": "blocking",
+          "reason": "素材未授权或授权状态未知，不得进入排期（authorized 状态未知）"
+        }
+      ],
+      "missing_fields": [
+        "duration_sec",
+        "authorized"
+      ],
+      "suggested_time": null,
+      "time_changed": false,
+      "hard_time_preserved": true,
+      "requires_user_confirmation": false,
+      "pending_confirmations": [],
+      "draft": null,
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "needs_info"
+    },
+    {
+      "material_id": "M04",
+      "title": "全城最便宜的健康理疗体验",
+      "requested_time": "13:00",
+      "time_hard": false,
+      "review_status": "risk",
+      "risk_reasons": [
+        {
+          "rule_id": "R03",
+          "severity": "blocking",
+          "reason": "标题命中违禁词，需修改标题后重审：最便宜"
+        },
+        {
+          "rule_id": "R05",
+          "severity": "manual_review",
+          "reason": "敏感品类需人工复核后才能排期"
+        }
+      ],
+      "missing_fields": [],
+      "suggested_time": null,
+      "time_changed": false,
+      "hard_time_preserved": true,
+      "requires_user_confirmation": false,
+      "pending_confirmations": [],
+      "draft": null,
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "blocked"
+    }
+  ],
+  "unfinished_materials": [],
+  "published": false,
+  "agent_summary": "离线 Mock 执行结束：共 5 次工具调用，其中草稿保存 0 次。本结果只验证流程正确性，不代表真实模型的决策质量。",
+  "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
+  "trace_file": "examples/03-rules-and-missing.trace.json"
+}

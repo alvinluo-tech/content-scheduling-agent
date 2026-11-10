@@ -1,0 +1,60 @@
+{
+  "$comment": "审核规则 + 排期营业时段，全部为合成数据",
+  "operating_hours": {
+    "start": "09:00",
+    "end": "21:00",
+    "granularity_min": 30
+  },
+  "banned_terms": [
+    "最便宜",
+    "全网最低",
+    "国家级",
+    "博彩",
+    "代金券"
+  ],
+  "rules": [
+    {
+      "id": "R01",
+      "name": "时长必填",
+      "type": "required_field",
+      "field": "duration_sec",
+      "severity": "blocking",
+      "message": "缺少时长，无法评估排期与切片"
+    },
+    {
+      "id": "R02",
+      "name": "授权状态必须为已授权",
+      "type": "must_be_true",
+      "field": "authorized",
+      "severity": "blocking",
+      "message": "素材未授权或授权状态未知，不得进入排期"
+    },
+    {
+      "id": "R03",
+      "name": "广告法违禁词",
+      "type": "banned_terms",
+      "severity": "blocking",
+      "message": "标题命中违禁词，需修改标题后重审"
+    },
+    {
+      "id": "R04",
+      "name": "标题长度上限",
+      "type": "max_length",
+      "field": "title",
+      "limit": 16,
+      "severity": "warning",
+      "message": "标题超长，建议压缩后再排期"
+    },
+    {
+      "id": "R05",
+      "name": "敏感品类需人工复核",
+      "type": "manual_review_category",
+      "values": [
+        "医疗",
+        "金融"
+      ],
+      "severity": "manual_review",
+      "message": "敏感品类需人工复核后才能排期"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.tmp
+.pytest_cache/
+.scratch/
+*.live.output.json
+*.live.trace.json

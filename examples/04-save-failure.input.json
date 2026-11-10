@@ -1,0 +1,15 @@
+{
+  "$comment": "验收点：保存失败（存储持续不可用）——重试后仍失败，必须如实报告，不得虚报保存成功",
+  "run_id": "case04-save-failure",
+  "now": "2026-11-12T09:40:00+08:00",
+  "requests": [
+    {
+      "material_id": "M05",
+      "requested_time": "15:00",
+      "time_hard": false
+    }
+  ],
+  "simulate": {
+    "save_failures": -1
+  }
+}

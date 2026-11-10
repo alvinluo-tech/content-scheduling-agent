@@ -1,0 +1,63 @@
+{
+  "run_id": "case06-step-limit",
+  "mode": "offline",
+  "model": "offline-scripted",
+  "terminal": "step_limit_reached",
+  "limits": {
+    "max_steps": 3,
+    "steps_used": 3,
+    "tool_calls": 3
+  },
+  "steps": [
+    {
+      "step": 1,
+      "rationale": "先读取 M02 的元数据，确认信息是否齐全",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M02",
+          "reason": "先读取 M02 的元数据，确认信息是否齐全"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M02 标题《新机开箱速览以及全场景续航实测说明》，必填字段齐全"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 2,
+      "rationale": "M02 元数据已读取，按审核规则校验风险",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M02",
+          "reason": "M02 元数据已读取，按审核规则校验风险"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 pass_with_warnings，命中规则 ['R04']"
+      },
+      "next_action": "调用 query_time_slot"
+    },
+    {
+      "step": 3,
+      "rationale": "检查用户要求的 11:00 是否可排",
+      "action": {
+        "tool": "query_time_slot",
+        "args": {
+          "material_id": "M02",
+          "time": "11:00",
+          "reason": "检查用户要求的 11:00 是否可排"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "11:00 可用，后续可用时段 ['11:30', '12:00', '12:30']"
+      },
+      "next_action": "结束并输出排期结果"
+    }
+  ],
+  "final_message": null
+}

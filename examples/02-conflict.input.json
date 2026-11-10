@@ -1,0 +1,16 @@
+{
+  "$comment": "验收点：时段冲突 + 确认边界（18:00 被 M00 占用，19:00 可用；硬性要求不得擅自变更）",
+  "run_id": "case02-conflict",
+  "now": "2026-11-12T09:20:00+08:00",
+  "requests": [
+    {
+      "material_id": "M01",
+      "requested_time": "18:00",
+      "time_hard": true,
+      "note": "客户指定首播 18:00"
+    }
+  ],
+  "simulate": {
+    "save_failures": 0
+  }
+}

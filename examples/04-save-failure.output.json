@@ -1,0 +1,45 @@
+{
+  "run_id": "case04-save-failure",
+  "date": "2026-11-12",
+  "status": "completed",
+  "completed": true,
+  "outcome": "failed",
+  "model": {
+    "mode": "offline",
+    "name": "offline-scripted"
+  },
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 6,
+    "tool_calls": 5
+  },
+  "summary": {
+    "total": 1,
+    "save_failed": 1
+  },
+  "materials": [
+    {
+      "material_id": "M05",
+      "title": "秋日露营 vlog 预告",
+      "requested_time": "15:00",
+      "time_hard": false,
+      "review_status": "pass",
+      "risk_reasons": [],
+      "missing_fields": [],
+      "suggested_time": null,
+      "time_changed": false,
+      "hard_time_preserved": true,
+      "requires_user_confirmation": false,
+      "pending_confirmations": [],
+      "draft": null,
+      "failed_save_attempts": 2,
+      "published": false,
+      "result_status": "save_failed"
+    }
+  ],
+  "unfinished_materials": [],
+  "published": false,
+  "agent_summary": "离线 Mock 执行结束：共 5 次工具调用，其中草稿保存 2 次。本结果只验证流程正确性，不代表真实模型的决策质量。",
+  "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
+  "trace_file": "examples/04-save-failure.trace.json"
+}

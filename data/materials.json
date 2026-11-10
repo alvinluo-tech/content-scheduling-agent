@@ -1,0 +1,67 @@
+{
+  "M00": {
+    "id": "M00",
+    "title": "早间新闻快讯",
+    "duration_sec": 45,
+    "format": "mp4",
+    "cover": "m00.jpg",
+    "authorized": true,
+    "category": "资讯",
+    "owner": "运营组",
+    "version": 3
+  },
+  "M01": {
+    "id": "M01",
+    "title": "城市夜骑 30 秒混剪",
+    "duration_sec": 30,
+    "format": "mp4",
+    "cover": "m01.jpg",
+    "authorized": true,
+    "category": "生活",
+    "owner": "内容组",
+    "version": 2
+  },
+  "M02": {
+    "id": "M02",
+    "title": "新机开箱速览以及全场景续航实测说明",
+    "duration_sec": 60,
+    "format": "mp4",
+    "cover": "m02.jpg",
+    "authorized": true,
+    "category": "数码",
+    "owner": "内容组",
+    "version": 1
+  },
+  "M03": {
+    "id": "M03",
+    "title": "联名礼盒预告",
+    "format": "mp4",
+    "cover": "",
+    "authorized": null,
+    "category": "电商",
+    "owner": "电商组",
+    "version": 5
+  },
+  "M04": {
+    "id": "M04",
+    "title": "全城最便宜的健康理疗体验",
+    "duration_sec": 40,
+    "format": "mp4",
+    "cover": "m04.jpg",
+    "authorized": true,
+    "category": "医疗",
+    "owner": "商务组",
+    "version": 1
+  },
+  "M05": {
+    "id": "M05",
+    "title": "秋日露营 vlog 预告",
+    "duration_sec": 50,
+    "format": "mp4",
+    "cover": "m05.jpg",
+    "authorized": true,
+    "category": "生活",
+    "owner": "内容组",
+    "version": 2
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "run_id": "case03-rules-missing",
+  "mode": "offline",
+  "model": "offline-scripted",
+  "terminal": "completed",
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 6,
+    "tool_calls": 5
+  },
+  "steps": [
+    {
+      "step": 1,
+      "rationale": "先读取 M03 的元数据，确认信息是否齐全",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M03",
+          "reason": "先读取 M03 的元数据，确认信息是否齐全"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M03 标题《联名礼盒预告》，缺 ['duration_sec', 'authorized']"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 2,
+      "rationale": "M03 元数据已读取，按审核规则校验风险",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M03",
+          "reason": "M03 元数据已读取，按审核规则校验风险"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 missing_info，命中规则 ['R01', 'R02']"
+      },
+      "next_action": "调用 read_material"
+    },
+    {
+      "step": 3,
+      "rationale": "规则判定信息缺失，补查一次素材元数据",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M03",
+          "reason": "规则判定信息缺失，补查一次素材元数据"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M03 标题《联名礼盒预告》，缺 ['duration_sec', 'authorized']"
+      },
+      "next_action": "调用 read_material"
+    },
+    {
+      "step": 4,
+      "rationale": "先读取 M04 的元数据，确认信息是否齐全",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M04",
+          "reason": "先读取 M04 的元数据，确认信息是否齐全"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M04 标题《全城最便宜的健康理疗体验》，必填字段齐全"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 5,
+      "rationale": "M04 元数据已读取，按审核规则校验风险",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M04",
+          "reason": "M04 元数据已读取，按审核规则校验风险"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 risk，命中规则 ['R03', 'R05']"
+      },
+      "next_action": "结束并输出排期结果"
+    }
+  ],
+  "final_message": "离线 Mock 执行结束：共 5 次工具调用，其中草稿保存 0 次。本结果只验证流程正确性，不代表真实模型的决策质量。"
+}

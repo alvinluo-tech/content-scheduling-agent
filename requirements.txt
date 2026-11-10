@@ -1,0 +1,7 @@
+# 运行时依赖（Python 3.10+，已在 3.12 验证）
+langgraph==1.2.20
+langchain-core==1.7.7
+langchain-openai==1.7.4
+python-dotenv==1.2.4
+
+# 测试仅用标准库 unittest，无需额外依赖

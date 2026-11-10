@@ -1,0 +1,16 @@
+{
+  "$comment": "验收点：正常排期（要求时段可用、硬性要求原样保留、仅一条非阻断告警）",
+  "run_id": "case01-normal",
+  "now": "2026-11-12T09:10:00+08:00",
+  "requests": [
+    {
+      "material_id": "M02",
+      "requested_time": "11:00",
+      "time_hard": true,
+      "note": "品牌方指定 11:00 发布"
+    }
+  ],
+  "simulate": {
+    "save_failures": 0
+  }
+}
