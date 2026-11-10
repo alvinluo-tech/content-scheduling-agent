@@ -1,5 +1,7 @@
 test_conflict_prerecorded_confirmation_is_reused (tests.test_agent_flow.AgentFlowTest.test_conflict_prerecorded_confirmation_is_reused) ... ok
 test_duplicate_submission_creates_one_draft (tests.test_agent_flow.AgentFlowTest.test_duplicate_submission_creates_one_draft) ... ok
+test_missing_api_key_fails_loudly (tests.test_agent_flow.AgentFlowTest.test_missing_api_key_fails_loudly)
+没有密钥必须直接报错并提示 --offline，不能静默降级成假结果。 ... ok
 test_no_publish_tool_exists (tests.test_agent_flow.AgentFlowTest.test_no_publish_tool_exists) ... ok
 test_normal_schedule (tests.test_agent_flow.AgentFlowTest.test_normal_schedule) ... ok
 test_reference_instance_conflict (tests.test_agent_flow.AgentFlowTest.test_reference_instance_conflict)
@@ -29,6 +31,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 28 tests in 0.141s
+Ran 29 tests in 1.721s
 
 OK
