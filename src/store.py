@@ -1,11 +1,53 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
+
+if os.name == "nt":  # pragma: no cover - 平台分支，CI 上只跑其中一支
+    import msvcrt
+else:  # pragma: no cover
+    import fcntl
+
+
+class LedgerBusy(RuntimeError):
+    """另一个进程正持有账本锁，等到超时仍拿不到。宁可报忙，也不要覆盖别人的写入。"""
+
+
+@contextlib.contextmanager
+def locked_file(path: Path, timeout: float = 10.0) -> Iterator[None]:
+    """跨进程互斥：账本是"读-改-写"，只有原子替换挡不住两个进程同时写丢更新。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a+b") as fh:
+        fh.seek(0, os.SEEK_END)
+        if fh.tell() == 0:
+            fh.write(b"\0")
+            fh.flush()
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fh.seek(0)
+                if os.name == "nt":
+                    msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise LedgerBusy(f"账本 {path.name} 被其它进程占用，等待 {timeout:.0f} 秒后放弃") from None
+                time.sleep(0.02)
+        try:
+            yield
+        finally:
+            fh.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -38,9 +80,36 @@ class Store:
         self.materials: dict[str, dict[str, Any]] = read_json(self.data_dir / "materials.json")
         self.rules_doc: dict[str, Any] = read_json(self.data_dir / "rules.json")
         self.schedule_doc: dict[str, Any] = read_json(self.data_dir / "schedule.json")
+        self.drafts: dict[str, dict[str, Any]] = {}
+        self.confirmations: dict[str, dict[str, Any]] = {}
+        self._lock_depth = 0
+        self._reload()
+
+    @property
+    def lock_path(self) -> Path:
+        return self.ledger_path.with_name(self.ledger_path.name + ".lock")
+
+    def _reload(self) -> None:
         ledger: dict[str, Any] = read_json(self.ledger_path) if self.ledger_path.exists() else {}
-        self.drafts: dict[str, dict[str, Any]] = ledger.get("drafts", {})
-        self.confirmations: dict[str, dict[str, Any]] = ledger.get("confirmations", {})
+        self.drafts = ledger.get("drafts", {})
+        self.confirmations = ledger.get("confirmations", {})
+
+    @contextlib.contextmanager
+    def transaction(self) -> Iterator["Store"]:
+        """写入前先拿锁、重读磁盘，再改再写：另一个进程这期间的写入不会被覆盖。
+
+        可重入：replan_confirmation 会先否决再登记新方案，只在最外层进出一次锁。
+        """
+        if self._lock_depth:
+            yield self
+            return
+        with locked_file(self.lock_path):
+            self._lock_depth = 1
+            try:
+                self._reload()
+                yield self
+            finally:
+                self._lock_depth = 0
 
     def material(self, material_id: str) -> dict[str, Any] | None:
         return self.materials.get(material_id)
@@ -124,63 +193,67 @@ class Store:
             record["material_id"],
             record["requested_time"],
         )
-        existing = self.drafts.get(key)
-        if existing is None:
-            self.drafts[key] = record
+        with self.transaction():
+            existing = self.drafts.get(key)
+            if existing is None:
+                self.drafts[key] = record
+                self.commit()
+                return record, True
+            existing["date"] = record["date"]
+            existing["channel"] = record.get("channel", self.default_channel())
+            existing["scheduled_time"] = record["scheduled_time"]
+            existing["status"] = record["status"]
+            existing["time_changed"] = record["time_changed"]
+            existing["date_changed"] = record["date_changed"]
+            existing["updated_at"] = record["updated_at"]
+            existing["submit_count"] = existing.get("submit_count", 1) + 1
             self.commit()
-            return record, True
-        existing["date"] = record["date"]
-        existing["channel"] = record.get("channel", self.default_channel())
-        existing["scheduled_time"] = record["scheduled_time"]
-        existing["status"] = record["status"]
-        existing["time_changed"] = record["time_changed"]
-        existing["date_changed"] = record["date_changed"]
-        existing["updated_at"] = record["updated_at"]
-        existing["submit_count"] = existing.get("submit_count", 1) + 1
-        self.commit()
-        return existing, False
+            return existing, False
 
     def add_confirmation(self, record: dict[str, Any]) -> dict[str, Any]:
-        self.confirmations[record["confirmation_id"]] = record
-        self.commit()
-        return record
+        with self.transaction():
+            self.confirmations[record["confirmation_id"]] = record
+            self.commit()
+            return record
 
     def approve_confirmation(self, confirmation_id: str, actor: str = "human") -> dict[str, Any]:
         """人工确认通道：只有人能调用，模型工具集里没有这个动作。"""
-        record = self.confirmations.get(confirmation_id)
-        if record is None:
-            raise ValueError(f"没有待确认项 {confirmation_id}")
-        if record.get("status") == "approved":
+        with self.transaction():
+            record = self.confirmations.get(confirmation_id)
+            if record is None:
+                raise ValueError(f"没有待确认项 {confirmation_id}")
+            if record.get("status") == "approved":
+                return record
+            record["status"] = "approved"
+            record["approved_by"] = actor
+            record["approved_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            self.commit()
             return record
-        record["status"] = "approved"
-        record["approved_by"] = actor
-        record["approved_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        self.commit()
-        return record
 
     def reject_confirmation(self, confirmation_id: str, actor: str = "human", note: str = "") -> dict[str, Any]:
         """人工否决：同样只有人能调用。被否决的替代方案连同它那份待确认草稿一起作废。"""
-        record = self.confirmations.get(confirmation_id)
-        if record is None:
-            raise ValueError(f"没有待确认项 {confirmation_id}")
-        if record.get("status") == "rejected":
+        with self.transaction():
+            record = self.confirmations.get(confirmation_id)
+            if record is None:
+                raise ValueError(f"没有待确认项 {confirmation_id}")
+            if record.get("status") == "rejected":
+                return record
+            record["status"] = "rejected"
+            record["rejected_by"] = actor
+            record["rejected_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            if note:
+                record["reject_note"] = note
+            for draft in self.drafts.values():
+                if (
+                    draft["material_id"] == record["material_id"]
+                    and draft.get("channel", self.default_channel()) == record.get("channel", self.default_channel())
+                    and draft["status"] == "draft_pending_confirmation"
+                    and draft["date"] == record.get("proposed_date", record.get("date"))
+                    and draft["scheduled_time"] == record["proposed_time"]
+                ):
+                    draft["status"] = "draft_rejected"
+            self.commit()
             return record
-        record["status"] = "rejected"
-        record["rejected_by"] = actor
-        record["rejected_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        if note:
-            record["reject_note"] = note
-        for draft in self.drafts.values():
-            if (
-                draft["material_id"] == record["material_id"]
-                and draft.get("channel", self.default_channel()) == record.get("channel", self.default_channel())
-                and draft["status"] == "draft_pending_confirmation"
-                and draft["date"] == record.get("proposed_date", record.get("date"))
-                and draft["scheduled_time"] == record["proposed_time"]
-            ):
-                draft["status"] = "draft_rejected"
-        self.commit()
-        return record
 
     def replan_confirmation(
         self,
@@ -195,6 +268,12 @@ class Store:
         否决与否决是同一件事——模型那版方案作废；区别只在于人给了新的落点，
         所以额外登记一条 approved 记录，模型重跑时 save_draft 才能落到 draft_ready。
         """
+        with self.transaction():
+            return self._replan_locked(confirmation_id, time_str, date, actor, note)
+
+    def _replan_locked(
+        self, confirmation_id: str, time_str: str, date: str | None, actor: str, note: str
+    ) -> dict[str, Any]:
         record = self.confirmations.get(confirmation_id)
         if record is None:
             raise ValueError(f"没有待确认项 {confirmation_id}")

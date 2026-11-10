@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Callable
 
 from .policy import evaluate_rules, find_conflicts, is_blank, rank_alternatives, slot_grid, to_minutes
-from .store import Store
+from .store import LedgerBusy, Store
 
 REASON_PROP = {
     "type": "string",
@@ -185,6 +185,8 @@ class Toolbox:
             else:
                 try:
                     result = handler(**args)
+                except LedgerBusy as exc:
+                    result = _err("LEDGER_BUSY", str(exc), hint="另一个进程正在写账本；稍后重试，不要假设已经写入成功")
                 except Exception as exc:  # 工具内部异常必须变成可观察结果，而不是中断执行
                     result = _err("TOOL_CRASH", f"{name} 内部异常：{type(exc).__name__}: {exc}", recoverable=False)
         if name == "query_time_slot" and result.get("ok") and args.get("material_id"):
@@ -376,6 +378,18 @@ class Toolbox:
         return True
 
     def save_draft(
+        self,
+        material_id: str,
+        scheduled_time: str,
+        reason: str,
+        date: str | None = None,
+        channel: str | None = None,
+    ) -> dict[str, Any]:
+        # 查冲突与写账本必须在同一把跨进程锁里：否则两个并发运行都会看到"空位"，各写一份草稿。
+        with self.store.transaction():
+            return self._save_draft(material_id, scheduled_time, reason, date, channel)
+
+    def _save_draft(
         self,
         material_id: str,
         scheduled_time: str,
