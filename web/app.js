@@ -74,6 +74,11 @@
     return String(value);
   }
 
+  function when(day, time) {
+    if (!day) { return text(time); }
+    return text(day) + " " + text(time);
+  }
+
   function chip(label, tone) {
     return el("span", "chip tone-" + (tone || "muted"), label);
   }
@@ -188,7 +193,12 @@
         var mday = m.scheduled_date || m.requested_date;
         if (!moved && mday && mday !== data.date) { moved = mday; }
       });
-      target = moved || data.date || dates[0];
+      // 用户要求的日期优先：先看这一场排期到底在跟哪一天较劲，改期结果写在素材行里
+      var wanted = null;
+      (report && report.materials || []).forEach(function (m) {
+        if (!wanted && m.requested_date && m.requested_date !== data.date) { wanted = m.requested_date; }
+      });
+      target = wanted || moved || data.date || dates[0];
     }
     if (dates.indexOf(target) < 0) { target = data.date || dates[0]; }
     activeDate = target;
@@ -342,9 +352,10 @@
     left.appendChild(el("h3", "m-title", text(m.title)));
 
     var facts = el("div", "m-facts");
-    facts.appendChild(el("span", null, "要求 " + text(m.requested_time) + (m.time_hard ? " · 硬性" : " · 可调整")));
-    facts.appendChild(el("span", null, "建议 " + text(m.suggested_time)));
+    facts.appendChild(el("span", null, "要求 " + when(m.requested_date, m.requested_time) + (m.time_hard ? " · 硬性" : " · 可调整")));
+    facts.appendChild(el("span", null, "建议 " + when(m.scheduled_date || m.requested_date, m.suggested_time)));
     if (m.time_changed) { facts.appendChild(el("span", null, "已改时段")); }
+    if (m.date_changed) { facts.appendChild(el("span", null, "已改日期")); }
     if (m.time_hard && m.hard_time_preserved === false) { facts.appendChild(el("span", "flag", "硬性要求未满足")); }
     left.appendChild(facts);
 

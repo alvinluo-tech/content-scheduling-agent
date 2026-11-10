@@ -1,5 +1,7 @@
 test_conflict_prerecorded_confirmation_is_reused (tests.test_agent_flow.AgentFlowTest.test_conflict_prerecorded_confirmation_is_reused) ... ok
 test_duplicate_submission_creates_one_draft (tests.test_agent_flow.AgentFlowTest.test_duplicate_submission_creates_one_draft) ... ok
+test_full_day_moves_to_the_next_day_only_with_a_confirmation (tests.test_agent_flow.AgentFlowTest.test_full_day_moves_to_the_next_day_only_with_a_confirmation)
+11-14 整日排满：模型只能顺延到 11-15 09:30，并且必须先登记待确认项。 ... ok
 test_missing_api_key_fails_loudly (tests.test_agent_flow.AgentFlowTest.test_missing_api_key_fails_loudly)
 没有密钥必须直接报错并提示 --offline，不能静默降级成假结果。 ... ok
 test_multi_day_conflict_stays_pending_on_its_own_day (tests.test_agent_flow.AgentFlowTest.test_multi_day_conflict_stays_pending_on_its_own_day)
@@ -24,6 +26,7 @@ test_min_gap_penalty_pushes_the_candidate_away_from_a_neighbour (tests.test_poli
 test_missing_info_blocks_drafting (tests.test_policy.PolicyTest.test_missing_info_blocks_drafting) ... ok
 test_pass_material_is_draftable (tests.test_policy.PolicyTest.test_pass_material_is_draftable) ... ok
 test_ranked_alternatives_prefer_the_closest_free_slot (tests.test_policy.PolicyTest.test_ranked_alternatives_prefer_the_closest_free_slot) ... ok
+test_ranking_without_an_anchor_starts_at_the_day_opening (tests.test_policy.PolicyTest.test_ranking_without_an_anchor_starts_at_the_day_opening) ... ok
 test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_grid_matches_operating_hours) ... ok
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
@@ -44,6 +47,8 @@ test_unknown_api_is_404 (tests.test_server.ServerTestCase.test_unknown_api_is_40
 test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_case_is_rejected) ... ok
 test_unknown_confirmation_is_rejected (tests.test_server.ServerTestCase.test_unknown_confirmation_is_rejected) ... ok
 test_cross_day_change_needs_confirmation_and_records_both_days (tests.test_tools.MultiDayToolboxTest.test_cross_day_change_needs_confirmation_and_records_both_days) ... ok
+test_full_day_falls_through_to_the_next_configured_day (tests.test_tools.MultiDayToolboxTest.test_full_day_falls_through_to_the_next_configured_day) ... ok
+test_next_day_hint_disappears_when_the_same_day_still_has_room (tests.test_tools.MultiDayToolboxTest.test_next_day_hint_disappears_when_the_same_day_still_has_room) ... ok
 test_same_time_on_another_day_does_not_conflict (tests.test_tools.MultiDayToolboxTest.test_same_time_on_another_day_does_not_conflict) ... ok
 test_slot_query_uses_the_requested_day (tests.test_tools.MultiDayToolboxTest.test_slot_query_uses_the_requested_day) ... ok
 test_unknown_date_is_rejected (tests.test_tools.MultiDayToolboxTest.test_unknown_date_is_rejected) ... ok
@@ -62,6 +67,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 59 tests in 5.414s
+Ran 63 tests in 7.484s
 
 OK

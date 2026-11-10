@@ -58,6 +58,7 @@ def main() -> int:
         ("04-save-failure", True),
         ("06-step-limit", True),
         ("07-multiday", True),
+    ("08-day-overflow", True),
     ]
     rows = []
     for case, reset in plan:

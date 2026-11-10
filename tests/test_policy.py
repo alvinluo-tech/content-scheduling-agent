@@ -84,6 +84,13 @@ class PolicyTest(unittest.TestCase):
         self.assertEqual(tight[0]["time"], "10:00")
         self.assertTrue(any("只隔 30 分钟" in reason for reason in tight[1]["reasons"]))
 
+    def test_ranking_without_an_anchor_starts_at_the_day_opening(self) -> None:
+        hours = self.store.operating_hours()
+        occupied = [{"time": "09:00", "material_id": "M02"}]
+        ranked = rank_alternatives(hours, occupied, None)
+        self.assertEqual(ranked[0]["time"], "09:30")
+        self.assertFalse(any(reason.startswith("距请求时段") for reason in ranked[0]["reasons"]))
+
 
 if __name__ == "__main__":
     unittest.main()

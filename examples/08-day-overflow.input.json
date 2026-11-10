@@ -1,0 +1,17 @@
+{
+  "$comment": "验收点：当天（11-14 上线日）从早到晚已排满，18:00 之后没有可用时段——工具只能顺延到 11-15 09:30，硬性要求因此必须登记待确认，草稿状态为 draft_pending_confirmation，published 恒为 false。",
+  "run_id": "case08-day-overflow",
+  "now": "2026-11-12T09:20:00+08:00",
+  "requests": [
+    {
+      "material_id": "M01",
+      "requested_date": "2026-11-14",
+      "requested_time": "18:00",
+      "time_hard": true,
+      "note": "上线日当天首发，不可挪到别的时间"
+    }
+  ],
+  "simulate": {
+    "save_failures": 0
+  }
+}

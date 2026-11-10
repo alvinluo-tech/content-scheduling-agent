@@ -97,7 +97,7 @@ class AgentFlowTest(unittest.TestCase):
         """11-13 09:00 被 M02 占用：改到 09:30 只能待确认；另一条素材在 11-13 空白时段直接落草稿。"""
         report = run_example("07-multiday", self.ledger)
         self.assertEqual(report["date"], "2026-11-12")
-        self.assertEqual(report["dates"], ["2026-11-12", "2026-11-13"])
+        self.assertEqual(report["dates"], ["2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"])
         self.assertEqual(report["outcome"], "pending_confirmation")
         rows = {row["material_id"]: row for row in report["materials"]}
         m06 = rows["M06"]
@@ -110,6 +110,22 @@ class AgentFlowTest(unittest.TestCase):
         self.assertEqual(m07["result_status"], "scheduled_draft")
         self.assertEqual(m07["scheduled_date"], "2026-11-13")
         self.assertFalse(m07["published"])
+        self.assertFalse(report["published"])
+
+    def test_full_day_moves_to_the_next_day_only_with_a_confirmation(self) -> None:
+        """11-14 整日排满：模型只能顺延到 11-15 09:30，并且必须先登记待确认项。"""
+        report = run_example("08-day-overflow", self.ledger)
+        self.assertEqual(report["outcome"], "pending_confirmation")
+        row = report["materials"][0]
+        self.assertEqual(row["requested_date"], "2026-11-14")
+        self.assertEqual(row["scheduled_date"], "2026-11-15")
+        self.assertEqual(row["suggested_time"], "09:30")
+        self.assertTrue(row["date_changed"])
+        self.assertTrue(row["requires_user_confirmation"])
+        self.assertEqual(row["draft"]["status"], "draft_pending_confirmation")
+        self.assertEqual(
+            [item["confirmation_id"] for item in row["pending_confirmations"]], ["C-M01-2026-11-15-0930"]
+        )
         self.assertFalse(report["published"])
 
     def test_step_limit_returns_incomplete_status(self) -> None:

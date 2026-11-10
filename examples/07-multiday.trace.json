@@ -66,10 +66,10 @@
         "tool": "request_confirmation",
         "args": {
           "material_id": "M06",
+          "date": "2026-11-13",
           "proposed_time": "09:30",
-          "question": "09:00 是硬性要求但已被占用，是否同意改到 09:30？",
-          "reason": "冲突 + 硬性要求，不能擅自改时间，先登记待确认项",
-          "date": "2026-11-13"
+          "question": "2026-11-13 09:00 是硬性要求但已被占用，是否同意改到 09:30？",
+          "reason": "冲突 + 硬性要求，不能擅自改时间，先登记待确认项"
         }
       },
       "observation": {
@@ -85,9 +85,9 @@
         "tool": "save_draft",
         "args": {
           "material_id": "M06",
+          "date": "2026-11-13",
           "scheduled_time": "09:30",
-          "reason": "09:00 冲突，改用替代时段 09:30 保存草稿",
-          "date": "2026-11-13"
+          "reason": "09:00 冲突，改用替代时段 09:30 保存草稿"
         }
       },
       "observation": {

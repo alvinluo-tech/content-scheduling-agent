@@ -110,20 +110,21 @@ def next_free_slots(hours: dict[str, Any], occupied: list[dict[str, Any]], after
 def rank_alternatives(
     hours: dict[str, Any],
     occupied: list[dict[str, Any]],
-    after: str,
+    after: str | None = None,
     limit: int = 3,
     preferences: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """候选替代时段按"离请求时段近、不与已有排期挤在一起、命中偏好档"打分，并给出可读理由。
 
     只排序不新增候选：候选集合仍是营业时段网格里 after 之后未被占用的格子，
-    与 next_free_slots 同源，差别只是顺序和理由。
+    与 next_free_slots 同源，差别只是顺序和理由。after=None 表示换到另一天重新开始找，
+    此时"距离"没有参照点，理由里不出现"+N 分钟"。
     """
     prefs = preferences or {}
     min_gap = int(prefs.get("min_gap_minutes") or 0)
     windows = [(str(w[0]), str(w[1])) for w in (prefs.get("prefer_windows") or [])]
     taken_minutes = sorted(to_minutes(slot["time"]) for slot in occupied)
-    start = to_minutes(after)
+    start = to_minutes(hours["start"]) - int(hours["granularity_min"]) if after is None else to_minutes(after)
     rows: list[dict[str, Any]] = []
     for time in slot_grid(hours):
         minute = to_minutes(time)
@@ -131,7 +132,7 @@ def rank_alternatives(
             continue
         distance = minute - start
         score = -(distance / 30.0)
-        reasons = [f"距请求时段 +{distance} 分钟"]
+        reasons = [] if after is None else [f"距请求时段 +{distance} 分钟"]
         if min_gap and taken_minutes:
             nearest = min(abs(minute - taken) for taken in taken_minutes)
             if nearest < min_gap:

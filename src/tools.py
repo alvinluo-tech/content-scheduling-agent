@@ -177,9 +177,11 @@ class Toolbox:
         if name == "query_time_slot":
             ranked = result.get("ranked_alternatives") or []
             best = f"首选 {ranked[0]['time']}：{'；'.join(ranked[0]['reasons'])}" if ranked else "无候选时段"
+            next_day = result.get("next_available")
+            tail = f"；{next_day['reason']}" if next_day else ""
             if result["available"]:
                 return f"{result['time']} 可用，后续可用时段 {result['alternatives']}；{best}"
-            return f"{result['time']} 被 {[c['material_id'] for c in result['conflicts']]} 占用，可用替代 {result['alternatives']}；{best}"
+            return f"{result['time']} 被 {[c['material_id'] for c in result['conflicts']]} 占用，可用替代 {result['alternatives']}；{best}{tail}"
         if name == "request_confirmation":
             return f"待确认 {result['confirmation_id']} 已登记（{result['status']}）"
         if name == "save_draft":
@@ -244,8 +246,26 @@ class Toolbox:
             "conflicts": conflicts,
             "alternatives": [row["time"] for row in ranked],
             "ranked_alternatives": ranked,
+            "next_available": None if ranked else self.next_day_slot(target_date, material_id, hours),
             "occupied_count": len(occupied),
         }
+
+    def next_day_slot(self, target_date: str, material_id: str, hours: dict[str, Any]) -> dict[str, Any] | None:
+        """当天请求时段之后已经排不下时，去后面配置过的日期里找第一个可用时段。"""
+        for day in self.store.available_dates():
+            if day <= target_date:
+                continue
+            occupied = self.store.occupied_slots(day) + self.store.drafted_slots(day, exclude_material=material_id)
+            ranked = rank_alternatives(hours, occupied, None, preferences=self.store.rules_doc.get("preferences"))
+            if not ranked:
+                continue
+            return {
+                "date": day,
+                "time": ranked[0]["time"],
+                "ranked_alternatives": ranked,
+                "reason": f"{target_date} 当天已无更晚的可用时段，顺延到 {day} {ranked[0]['time']}",
+            }
+        return None
 
     def request_confirmation(
         self, material_id: str, proposed_time: str, question: str, reason: str, date: str | None = None

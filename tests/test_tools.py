@@ -216,6 +216,31 @@ class MultiDayToolboxTest(unittest.TestCase):
         self.assertTrue(other_day["date_changed"])
         self.assertEqual(other_day["date"], "2026-11-12")
 
+    def test_full_day_falls_through_to_the_next_configured_day(self) -> None:
+        box = Toolbox(self.store, make_run("M01", requested_date="2026-11-14", requested_time="18:00"))
+        result = box.call(
+            "query_time_slot",
+            {"material_id": "M01", "time": "18:00", "date": "2026-11-14", "reason": "看看上线日还有没有位置"},
+        )
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["available"])
+        self.assertEqual(result["alternatives"], [])
+        next_day = result["next_available"]
+        self.assertIsNotNone(next_day)
+        self.assertEqual(next_day["date"], "2026-11-15")
+        self.assertEqual(next_day["time"], "09:30")
+        self.assertIn("顺延到 2026-11-15 09:30", next_day["reason"])
+
+    def test_next_day_hint_disappears_when_the_same_day_still_has_room(self) -> None:
+        box = Toolbox(self.store, make_run("M01", requested_date="2026-11-15", requested_time="09:00"))
+        result = box.call(
+            "query_time_slot",
+            {"material_id": "M01", "time": "09:00", "date": "2026-11-15", "reason": "看看 11-15 早间"},
+        )
+        self.assertFalse(result["available"])
+        self.assertEqual(result["alternatives"][0], "09:30")
+        self.assertIsNone(result["next_available"])
+
 
 if __name__ == "__main__":
     unittest.main()

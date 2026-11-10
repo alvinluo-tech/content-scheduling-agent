@@ -72,7 +72,7 @@ class ScriptedChatModel:
             action = _next_action(req, history)
             if action is not None:
                 name, args = action
-                if name in DATE_AWARE_TOOLS and req.get("requested_date"):
+                if name in DATE_AWARE_TOOLS and req.get("requested_date") and "date" not in args:
                     args["date"] = req["requested_date"]
                 return self._call(name, args)
         done = sum(1 for h in history if h["tool"] == "save_draft")
@@ -140,14 +140,13 @@ def _next_action(req: dict[str, Any], history: list[dict[str, Any]]) -> tuple[st
                 }
             return None
         if code == "HARD_CONSTRAINT_VIOLATION" and confirm is None:
-            alt = _first_alternative(query)
-            if alt:
-                return "request_confirmation", {
-                    "material_id": material_id,
-                    "proposed_time": alt,
-                    "question": f"{req['requested_time']} 是硬性要求但已被占用，是否同意改到 {alt}？",
-                    "reason": "保存被硬性约束拦截，先登记待确认项",
-                }
+            proposal = _proposal(query, req)
+            return "request_confirmation", {
+                **_proposal_args(material_id, proposal),
+                "proposed_time": proposal["time"],
+                "question": _proposal_question(req, proposal),
+                "reason": "保存被硬性约束拦截，先登记待确认项",
+            }
     if query is None:
         return "query_time_slot", {
             "material_id": material_id,
@@ -157,24 +156,51 @@ def _next_action(req: dict[str, Any], history: list[dict[str, Any]]) -> tuple[st
     query_result = query["result"]
     if query_result.get("ok") and query_result.get("available"):
         return "save_draft", {"material_id": material_id, "scheduled_time": req["requested_time"], "reason": "要求的时段可用且审核通过，保存草稿"}
-    alt = _first_alternative(query) or req["requested_time"]
+    proposal = _proposal(query, req)
     if req.get("time_hard") and confirm is None:
         return "request_confirmation", {
-            "material_id": material_id,
-            "proposed_time": alt,
-            "question": f"{req['requested_time']} 是硬性要求但已被占用，是否同意改到 {alt}？",
+            **_proposal_args(material_id, proposal),
+            "proposed_time": proposal["time"],
+            "question": _proposal_question(req, proposal),
             "reason": "冲突 + 硬性要求，不能擅自改时间，先登记待确认项",
         }
     if confirm is not None and not confirm["result"].get("ok"):
         return None
-    return "save_draft", {"material_id": material_id, "scheduled_time": alt, "reason": f"{req['requested_time']} 冲突，改用替代时段 {alt} 保存草稿"}
+    return "save_draft", {
+        **_proposal_args(material_id, proposal),
+        "scheduled_time": proposal["time"],
+        "reason": f"{req['requested_time']} 冲突，改用替代时段 {proposal['time']} 保存草稿",
+    }
 
 
-def _first_alternative(query: dict[str, Any] | None) -> str | None:
+def _proposal(query: dict[str, Any] | None, req: dict[str, Any]) -> dict[str, Any]:
+    """冲突时该把草稿放到哪个（日期，时段）：先用当天替代时段，当天排不下才顺延到后面配置过的日期。"""
+    requested_date = req.get("requested_date")
+    fallback = {"time": req["requested_time"], "date": requested_date, "next_day": False}
     if not query:
-        return None
-    alternatives = query["result"].get("alternatives") or []
-    return alternatives[0] if alternatives else None
+        return fallback
+    result = query["result"]
+    alternatives = result.get("alternatives") or []
+    if alternatives:
+        return {"time": alternatives[0], "date": requested_date, "next_day": False}
+    next_day = result.get("next_available")
+    if next_day:
+        return {"time": next_day["time"], "date": next_day["date"], "next_day": True}
+    return fallback
+
+
+def _proposal_args(material_id: str, proposal: dict[str, Any]) -> dict[str, Any]:
+    args: dict[str, Any] = {"material_id": material_id}
+    if proposal.get("date"):
+        args["date"] = proposal["date"]
+    return args
+
+
+def _proposal_question(req: dict[str, Any], proposal: dict[str, Any]) -> str:
+    day = f"{req['requested_date']} " if req.get("requested_date") else ""
+    if proposal["next_day"]:
+        return f"{day}{req['requested_time']} 是硬性要求，但当天更晚的时段已排满，是否同意顺延到 {proposal['date']} {proposal['time']}？"
+    return f"{day}{req['requested_time']} 是硬性要求但已被占用，是否同意改到 {proposal['time']}？"
 
 
 def build_chat_model(mode: str, run: dict[str, Any]) -> Any:

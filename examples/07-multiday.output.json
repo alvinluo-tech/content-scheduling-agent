@@ -3,7 +3,9 @@
   "date": "2026-11-12",
   "dates": [
     "2026-11-12",
-    "2026-11-13"
+    "2026-11-13",
+    "2026-11-14",
+    "2026-11-15"
   ],
   "status": "completed",
   "completed": true,
@@ -41,7 +43,7 @@
       "pending_confirmations": [
         {
           "confirmation_id": "C-M06-2026-11-13-0930",
-          "question": "09:00 是硬性要求但已被占用，是否同意改到 09:30？",
+          "question": "2026-11-13 09:00 是硬性要求但已被占用，是否同意改到 09:30？",
           "proposed_date": "2026-11-13",
           "proposed_time": "09:30",
           "status": "pending"
