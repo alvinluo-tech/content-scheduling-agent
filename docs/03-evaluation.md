@@ -41,7 +41,7 @@
 
 界面不是另一条实现路径：`src/server.py` 的 `/api/run` 直接调 `run_pipeline()`，测试断言它跑出的报告与 CLI 同构
 （`tests/test_server.py`：02 场景 `steps_used=5`、首个工具 `read_material`、末个 `save_draft`、`published=False`）。
-四张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+五张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -49,6 +49,7 @@
 | `docs/images/web-03-rules.png` | 信息缺失 + 规则风险 | M03「信息缺失」、M04「已阻断」；风险行带 `R03`/`R05` 而非 `[object Object]`；草稿均「未落库」 |
 | `docs/images/web-04-save-failure.png` | 保存失败 | 结论「存在失败项」；M05「保存失败」、草稿「未保存（失败 2 次）」；trace 末两步 `FAIL` |
 | `docs/images/web-06-step-limit.png` | 步数上限 | 结论「步数上限中断」；`步数 3/3`；M02「未完成」、M05「未处理」，模型自述写明未收尾 |
+| `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
 
 ## 失败与限制
 

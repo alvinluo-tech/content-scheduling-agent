@@ -55,7 +55,8 @@ CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的
 ![时段冲突场景](docs/images/web-02-conflict.png)
 
 截图：`docs/images/web-02-conflict.png`（冲突→待确认）、`web-03-rules.png`（信息缺失 + 规则风险）、
-`web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）。
+`web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）、
+`web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）。
 
 ## 评审入口（按题面验收点）
 
