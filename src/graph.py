@@ -43,7 +43,7 @@ def build_agent_graph(llm: Any, toolbox: Toolbox, trace: TraceRecorder, max_step
             name = call["name"]
             args = dict(call.get("args") or {})
             result = toolbox.call(name, args)
-            trace.record(len(trace.steps) + 1, name, args, result, toolbox.summary_of(name, result))
+            trace.record(state.get("steps", 0), name, args, result, toolbox.summary_of(name, result))
             outputs.append(
                 ToolMessage(content=json.dumps(result, ensure_ascii=False), tool_call_id=call["id"], name=name)
             )

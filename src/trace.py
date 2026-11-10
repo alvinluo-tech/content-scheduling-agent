@@ -4,7 +4,11 @@ from typing import Any
 
 
 class TraceRecorder:
-    """记录每一步的动作、观察与后续动作；next_action 由下一步反填，保证链路闭合。"""
+    """记录每一步的动作、观察与后续动作；next_action 由下一步反填，保证链路闭合。
+
+    step 编号 = 模型决策轮次（与报告里的 limits.steps_used 同口径），
+    同一轮里模型并行发出的多个工具调用共享同一步号，因此 trace 条目数可能多于步数。
+    """
 
     def __init__(self, run_id: str, mode: str, model_name: str) -> None:
         self.run_id = run_id
