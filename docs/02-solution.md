@@ -28,7 +28,7 @@
 | --- | --- | --- |
 | `read_material` | 读元数据，返回缺失的必填字段 | 素材必须在本次请求范围内（`NO_REQUEST`）；不存在 → `MATERIAL_NOT_FOUND` |
 | `check_rules` | 按 R01-R05 审核 | 返回 `review_status`（pass / pass_with_warnings / missing_info / risk）与 `can_draft` |
-| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段及其排序理由（`date` 可选，缺省用该素材的 `requested_date`） | 不在营业时段/网格 → `BAD_TIME`；日期不在 `schedule.json` 的 `days` 里 → `DATE_NOT_AVAILABLE`（不可恢复）；占用按天算，草稿同样占位（但自己的草稿不算冲突） |
+| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段及其排序理由（`date` 可选，缺省用该素材的 `requested_date`）；当天更晚已无位置时额外返回 `next_available`（后面配置过的日期里第一个可用时段及理由） | 不在营业时段/网格 → `BAD_TIME`；日期不在 `schedule.json` 的 `days` 里 → `DATE_NOT_AVAILABLE`（不可恢复）；占用按天算，草稿同样占位（但自己的草稿不算冲突） |
 | `request_confirmation` | 把"需要人拍板"变成一条可追踪的记录 | 幂等：同一 `(素材, 请求时段, 建议时段)` 只登记一条 |
 | `save_draft` | 写草稿账本（`date` 可选） | ① 硬性时间的时间或日期被改动且未确认 → `HARD_CONSTRAINT_VIOLATION`；② `can_draft=false` → `MATERIAL_NOT_READY`；③ 时段被占 → `SLOT_CONFLICT`；④ 注入失败 → `SAVE_FAILED`；⑤ 重复提交 → 同 `draft_id`，`deduplicated=true` |
 
@@ -84,6 +84,16 @@
 
 数据里 `min_gap_minutes` 取值 30（等于一格），所以它只在真的"贴格子"时才生效；把它调大，
 排序会自己躲开拥挤时段——这一条由 `tests/test_policy.py` 用 60 分钟显式验证，避免"配置写了但从不生效"。
+
+## 当天排不下时，谁决定顺延
+
+替代时段只在**同一天**里找。如果请求时段之后当天已经排满，工具不会编一个"再往后一点"的时间，
+而是再算一个 `next_available`：按 `schedule.json` 里配置的日期顺序，找后面第一个还有空位的日子，
+连理由一起返回（`2026-11-14 当天已无更晚的可用时段，顺延到 2026-11-15 09:30`）。
+
+顺延**仍然是改期**，所以走的是同一条护栏：`time_hard=true` 的请求要先把确认项登记出来，
+用户同意前草稿状态只能是 `draft_pending_confirmation`。工具只回答"哪天有位置"，
+"能不能把硬性要求推迟一天"这个判断始终留给用户——这是 08 用例要演示的那条路径。
 排序结果不改变工具的判定：`available` 仍只看冲突，模型看到的第一个候选是"最推荐的"，不是"唯一合法的"。
 
 ## 报告导出（渲染层，不是第二条链路）

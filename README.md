@@ -19,7 +19,7 @@ uv venv .venv && uv pip install --python .venv/Scripts/python.exe -r requirement
   --out examples/02-conflict.output.json --trace examples/02-conflict.trace.json \
   --report-md examples/02-conflict.report.md
 
-# 3. 一次跑完全部 7 个用例（会重置草稿账本）
+# 3. 一次跑完全部 8 个用例（会重置草稿账本）
 .venv/Scripts/python.exe scripts/run_examples.py
 
 # 4. 跑测试
@@ -76,7 +76,7 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 `web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）、
 `web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）、
 `web-02-conflict-streaming.png`（真实模型运行中的一帧：右栏逐条推送，中间上一轮结论压暗）、
-`web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、
+`web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、`web-08-day-overflow.png`（当天排满：11-14 整日有排期，改期到 11-15 09:30 待确认）、
 `web-report-md.png`（结论下方多出「导出 Markdown 报告」）、`web-narrow.png`（884px 窄屏：单列堆叠，顶栏显示本轮耗时）。
 键盘操作：`↑`/`↓`（或 `←`/`→`）在场景间移动、`Ctrl/⌘ + Enter` 运行，焦点有可见描边。
 
@@ -91,6 +91,7 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 | 规则风险 | 同上 | M04 `blocked`，`risk_reasons` 命中 R03 |
 | 保存失败 | `examples/04-save-failure.*` | `result_status=save_failed`，无草稿，不谎报成功 |
 | 步数上限 | `examples/06-step-limit.*` | `status=step_limit_reached`、`completed=false`、列出未完成素材 |
+| 当天排满 · 顺延 | `examples/08-day-overflow.*` | 11-14 整日排满、18:00 之后无位置 → 工具给出次日 09:30，模型先登记 `C-M01-2026-11-15-0930` 再存草稿：`scheduled_date=2026-11-15`、`date_changed=true`、`draft_pending_confirmation`、`published=false` |
 | 多日排期 | `examples/07-multiday.*` | M06 在 11-13 09:00 被 M02 占 → `scheduled_date=2026-11-13`、`suggested_time=09:30`、待确认；M07 同一天 20:00 直接落草稿；`published=false` |
 
 每个 `.output.json` 是实际输出，`.trace.json` 是同一次运行的分步记录（动作 / 参数 / 观察摘要 / 下一步与决策依据）。
@@ -100,9 +101,9 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 ```
 src/        store / policy / tools / models / graph / trace / report / markdown / main / server（Web 演示用，标准库 http.server）
 data/       合成素材、审核规则、已有排期、草稿账本
-examples/   7 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
+examples/   8 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      59 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、替代时段排序、Markdown 报告、HTTP 接口 / SSE 推送、键盘与读屏钩子）
+tests/      63 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、替代时段排序、Markdown 报告、HTTP 接口 / SSE 推送、键盘与读屏钩子）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```
