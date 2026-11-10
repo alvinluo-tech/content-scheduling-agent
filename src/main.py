@@ -57,7 +57,7 @@ def run_pipeline(
     trace = TraceRecorder(run.get("run_id") or run_id or "run", mode, str(model_name))
     if on_trace_event is not None:
         trace.add_listener(on_trace_event)
-    system_text = build_system_prompt(run, store.schedule_date(), store.operating_hours())
+    system_text = build_system_prompt(run, store.schedule_date(), store.operating_hours(), store.available_dates())
     graph = build_agent_graph(llm, toolbox, trace, steps, system_text)
     state = graph.invoke(
         {"messages": [HumanMessage(content="请按系统提示处理本次排期请求。")], "steps": 0, "tool_calls": 0}

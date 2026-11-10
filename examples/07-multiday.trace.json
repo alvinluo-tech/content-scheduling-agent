@@ -1,0 +1,169 @@
+{
+  "run_id": "case07-multiday",
+  "mode": "offline",
+  "model": "offline-scripted",
+  "terminal": "completed",
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 10,
+    "tool_calls": 9
+  },
+  "steps": [
+    {
+      "step": 1,
+      "rationale": "先读取 M06 的元数据，确认信息是否齐全",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M06",
+          "reason": "先读取 M06 的元数据，确认信息是否齐全"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M06 标题《城市通勤 45 秒预告》，必填字段齐全"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 2,
+      "rationale": "M06 元数据已读取，按审核规则校验风险",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M06",
+          "reason": "M06 元数据已读取，按审核规则校验风险"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 pass，命中规则 无"
+      },
+      "next_action": "调用 query_time_slot"
+    },
+    {
+      "step": 3,
+      "rationale": "检查用户要求的 09:00 是否可排",
+      "action": {
+        "tool": "query_time_slot",
+        "args": {
+          "material_id": "M06",
+          "time": "09:00",
+          "reason": "检查用户要求的 09:00 是否可排",
+          "date": "2026-11-13"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "09:00 被 ['M07'] 占用，可用替代 ['09:30', '10:00', '10:30']"
+      },
+      "next_action": "调用 request_confirmation"
+    },
+    {
+      "step": 4,
+      "rationale": "冲突 + 硬性要求，不能擅自改时间，先登记待确认项",
+      "action": {
+        "tool": "request_confirmation",
+        "args": {
+          "material_id": "M06",
+          "proposed_time": "09:30",
+          "question": "09:00 是硬性要求但已被占用，是否同意改到 09:30？",
+          "reason": "冲突 + 硬性要求，不能擅自改时间，先登记待确认项",
+          "date": "2026-11-13"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "待确认 C-M06-2026-11-13-0930 已登记（pending）"
+      },
+      "next_action": "调用 save_draft"
+    },
+    {
+      "step": 5,
+      "rationale": "09:00 冲突，改用替代时段 09:30 保存草稿",
+      "action": {
+        "tool": "save_draft",
+        "args": {
+          "material_id": "M06",
+          "scheduled_time": "09:30",
+          "reason": "09:00 冲突，改用替代时段 09:30 保存草稿",
+          "date": "2026-11-13"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "草稿 D-M06-2026-11-13-0900 draft_pending_confirmation，published=False"
+      },
+      "next_action": "调用 read_material"
+    },
+    {
+      "step": 6,
+      "rationale": "先读取 M07 的元数据，确认信息是否齐全",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M07",
+          "reason": "先读取 M07 的元数据，确认信息是否齐全"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M07 标题《双十一战报速递》，必填字段齐全"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 7,
+      "rationale": "M07 元数据已读取，按审核规则校验风险",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M07",
+          "reason": "M07 元数据已读取，按审核规则校验风险"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 pass，命中规则 无"
+      },
+      "next_action": "调用 query_time_slot"
+    },
+    {
+      "step": 8,
+      "rationale": "检查用户要求的 20:00 是否可排",
+      "action": {
+        "tool": "query_time_slot",
+        "args": {
+          "material_id": "M07",
+          "time": "20:00",
+          "reason": "检查用户要求的 20:00 是否可排",
+          "date": "2026-11-13"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "20:00 可用，后续可用时段 ['20:30']"
+      },
+      "next_action": "调用 save_draft"
+    },
+    {
+      "step": 9,
+      "rationale": "要求的时段可用且审核通过，保存草稿",
+      "action": {
+        "tool": "save_draft",
+        "args": {
+          "material_id": "M07",
+          "scheduled_time": "20:00",
+          "reason": "要求的时段可用且审核通过，保存草稿",
+          "date": "2026-11-13"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "草稿 D-M07-2026-11-13-2000 draft_ready，published=False"
+      },
+      "next_action": "结束并输出排期结果"
+    }
+  ],
+  "final_message": "离线 Mock 执行结束：共 9 次工具调用，其中草稿保存 2 次。本结果只验证流程正确性，不代表真实模型的决策质量。"
+}

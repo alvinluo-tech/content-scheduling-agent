@@ -55,6 +55,7 @@ def main() -> int:
         ("03-rules-and-missing", True),
         ("04-save-failure", True),
         ("06-step-limit", True),
+        ("07-multiday", True),
     ]
     rows = []
     for case, reset in plan:

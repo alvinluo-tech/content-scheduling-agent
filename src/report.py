@@ -54,12 +54,14 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
     rows: list[dict[str, Any]] = []
     for request in run.get("requests", []):
         material_id = request["material_id"]
+        requested_date = request.get("requested_date") or date
         material = store.material(material_id)
         touched = any((call.get("args") or {}).get("material_id") == material_id for call in toolbox.calls)
         if material is None:
             rows.append(
                 {
                     "material_id": material_id,
+                    "requested_date": requested_date,
                     "requested_time": request["requested_time"],
                     "time_hard": bool(request.get("time_hard")),
                     "review_status": "not_found",
@@ -76,15 +78,17 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
             )
             continue
         review = evaluate_rules(material, store.rules_doc)
-        draft = store.draft(date, material_id, request["requested_time"])
+        draft = store.draft(requested_date, material_id, request["requested_time"])
         confirmations = [
-            c for c in store.confirmations_for(date, material_id, request["requested_time"])
+            c for c in store.confirmations_for(requested_date, material_id, request["requested_time"])
         ]
+        date_changed = bool((draft or {}).get("date_changed"))
         status = _material_status(request, review, draft, touched, toolbox.attempts.get(material_id, 0))
         rows.append(
             {
                 "material_id": material_id,
                 "title": material.get("title"),
+                "requested_date": requested_date,
                 "requested_time": request["requested_time"],
                 "time_hard": bool(request.get("time_hard")),
                 "review_status": review["review_status"],
@@ -92,14 +96,17 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                     {"rule_id": v["rule_id"], "severity": v["severity"], "reason": v["reason"]} for v in review["violations"]
                 ],
                 "missing_fields": review["missing_fields"],
+                "scheduled_date": (draft or {}).get("date"),
                 "suggested_time": (draft or {}).get("scheduled_time"),
                 "time_changed": (draft or {}).get("time_changed", False),
-                "hard_time_preserved": not (draft or {}).get("time_changed", False),
+                "date_changed": date_changed,
+                "hard_time_preserved": not ((draft or {}).get("time_changed", False) or date_changed),
                 "requires_user_confirmation": any(c["status"] == "pending" for c in confirmations),
                 "pending_confirmations": [
                     {
                         "confirmation_id": c["confirmation_id"],
                         "question": c["question"],
+                        "proposed_date": c.get("proposed_date", c.get("date")),
                         "proposed_time": c["proposed_time"],
                         "status": c["status"],
                     }
@@ -107,6 +114,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                 ],
                 "draft": None if draft is None else {
                     "draft_id": draft["draft_id"],
+                    "scheduled_date": draft["date"],
                     "scheduled_time": draft["scheduled_time"],
                     "status": draft["status"],
                     "submit_count": draft.get("submit_count", 1),
@@ -128,6 +136,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
     return {
         "run_id": run.get("run_id", "run"),
         "date": date,
+        "dates": store.available_dates(),
         "status": trace.terminal,
         "completed": completed,
         "outcome": _outcome(statuses, trace.terminal),

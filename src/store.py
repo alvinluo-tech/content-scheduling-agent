@@ -56,11 +56,13 @@ class Store:
     def schedule_date(self) -> str:
         return self.schedule_doc["date"]
 
+    def available_dates(self) -> list[str]:
+        """可排日期来自 schedule.json 的 days（默认日期也必须在其中）。"""
+        return sorted(self.schedule_doc.get("days", {}).keys())
+
     def occupied_slots(self, date: str | None = None) -> list[dict[str, Any]]:
         target = date or self.schedule_date()
-        if target != self.schedule_doc["date"]:
-            return []
-        return list(self.schedule_doc["slots"])
+        return list(self.schedule_doc.get("days", {}).get(target, []))
 
     def draft(self, date: str, material_id: str, requested_time: str) -> dict[str, Any] | None:
         return self.drafts.get(draft_key(date, material_id, requested_time))
@@ -74,15 +76,18 @@ class Store:
         ]
 
     def upsert_draft(self, record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
-        key = draft_key(record["date"], record["material_id"], record["requested_time"])
+        """去重键用“用户要求”而不是“建议结果”：换了替代时段重提仍是同一份草稿。"""
+        key = draft_key(record["requested_date"], record["material_id"], record["requested_time"])
         existing = self.drafts.get(key)
         if existing is None:
             self.drafts[key] = record
             self.commit()
             return record, True
+        existing["date"] = record["date"]
         existing["scheduled_time"] = record["scheduled_time"]
         existing["status"] = record["status"]
         existing["time_changed"] = record["time_changed"]
+        existing["date_changed"] = record["date_changed"]
         existing["updated_at"] = record["updated_at"]
         existing["submit_count"] = existing.get("submit_count", 1) + 1
         self.commit()
@@ -106,10 +111,13 @@ class Store:
         self.commit()
         return record
 
-    def confirmations_for(self, date: str, material_id: str, requested_time: str) -> list[dict[str, Any]]:
+    def confirmations_for(self, requested_date: str, material_id: str, requested_time: str) -> list[dict[str, Any]]:
+        """按“用户原本要求的那一天 + 那个时间”找确认项；提议日期在 proposed_date 上。"""
         return [
             c for c in self.confirmations.values()
-            if c["date"] == date and c["material_id"] == material_id and c["requested_time"] == requested_time
+            if c.get("requested_date", c.get("date")) == requested_date
+            and c["material_id"] == material_id
+            and c["requested_time"] == requested_time
         ]
 
     def commit(self) -> None:

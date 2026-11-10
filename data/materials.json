@@ -63,5 +63,27 @@
     "category": "生活",
     "owner": "内容组",
     "version": 2
+  },
+  "M06": {
+    "id": "M06",
+    "title": "城市通勤 45 秒预告",
+    "duration_sec": 45,
+    "format": "mp4",
+    "cover": "m06.jpg",
+    "authorized": true,
+    "category": "生活",
+    "owner": "内容组",
+    "version": 1
+  },
+  "M07": {
+    "id": "M07",
+    "title": "双十一战报速递",
+    "duration_sec": 30,
+    "format": "mp4",
+    "cover": "m07.jpg",
+    "authorized": true,
+    "category": "电商",
+    "owner": "电商组",
+    "version": 4
   }
 }

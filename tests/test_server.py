@@ -55,9 +55,13 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(status, 200)
         state = json.loads(body.decode("utf-8"))["state"]
         self.assertEqual(state["date"], "2026-11-12")
+        self.assertEqual(state["dates"], ["2026-11-12", "2026-11-13"])
+        self.assertEqual(sorted(state["days"].keys()), state["dates"])
+        self.assertEqual([slot["time"] for slot in state["slots"]], ["10:00", "18:00", "18:30", "20:00"])
+        self.assertEqual([slot["time"] for slot in state["days"]["2026-11-13"]], ["09:00", "14:00"])
         self.assertEqual(state["hours"]["start"], "09:00")
         self.assertEqual(len(state["rules"]), 5)
-        self.assertEqual(len(state["cases"]), 6)
+        self.assertEqual(len(state["cases"]), 7)
         self.assertEqual(state["drafts"], {})
 
     def test_index_is_served(self) -> None:

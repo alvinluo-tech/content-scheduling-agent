@@ -51,6 +51,8 @@
 
   var selected = "02-conflict";
   var state = null;
+  var lastReport = null;
+  var activeDate = null;
   var running = false;
   var stream = null;
   var finished = false;
@@ -88,7 +90,10 @@
 
   /* ---------- static chrome ---------- */
   function renderMeta(data) {
-    $("meta-date").textContent = text(data.date);
+    var dates = (data.dates && data.dates.length) ? data.dates : [data.date];
+    $("meta-date").textContent = dates.length > 1
+      ? text(dates[0]) + " 起 " + dates.length + " 天"
+      : text(data.date);
     $("meta-channel").textContent = data.channel === "main" ? "主频道" : text(data.channel);
     $("meta-ledger").textContent = text(data.ledger);
   }
@@ -145,6 +150,40 @@
     return slots;
   }
 
+  function resolveDay(data, report) {
+    var dates = (data.dates && data.dates.length) ? data.dates : [data.date];
+    var target = activeDate;
+    if (dates.indexOf(target) < 0) {
+      var moved = null;
+      (report && report.materials || []).forEach(function (m) {
+        var mday = m.scheduled_date || m.requested_date;
+        if (!moved && mday && mday !== data.date) { moved = mday; }
+      });
+      target = moved || data.date || dates[0];
+    }
+    if (dates.indexOf(target) < 0) { target = data.date || dates[0]; }
+    activeDate = target;
+    return { dates: dates, day: target };
+  }
+
+  function renderDayTabs(dates) {
+    var box = $("day-tabs");
+    if (!box) { return; }
+    clear(box);
+    if (dates.length < 2) { box.hidden = true; return; }
+    box.hidden = false;
+    dates.forEach(function (day) {
+      var btn = el("button", "day-tab", day);
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", day === activeDate ? "true" : "false");
+      btn.addEventListener("click", function () {
+        activeDate = day;
+        if (state) { renderTimeline(state, lastReport); }
+      });
+      box.appendChild(btn);
+    });
+  }
+
   function renderTimeline(data, report) {
     var root = $("timeline");
     var scale = $("timeline-scale");
@@ -153,25 +192,30 @@
     clear(scale);
     clear(ledger);
     var hours = data.hours || {};
-    $("timeline-hint").textContent = text(hours.start) + "–" + text(hours.end) + " · " + (hours.granularity_min || 30) + " 分钟一格";
+    var picked = resolveDay(data, report);
+    var day = picked.day;
+    renderDayTabs(picked.dates);
+    $("timeline-hint").textContent = day + " · " + text(hours.start) + "–" + text(hours.end) + " · " + (hours.granularity_min || 30) + " 分钟一格";
 
     var slots = buildSlots(data);
     var cells = {};
     slots.forEach(function (slot) { cells[slot.time] = { slot: slot, booked: null, suggested: null, drafted: null }; });
 
-    (data.slots || []).forEach(function (item) {
+    var daySlots = (data.days && data.days[day]) || (day === data.date ? data.slots : []) || [];
+    daySlots.forEach(function (item) {
       if (cells[item.time]) { cells[item.time].booked = item.material_id; }
     });
     var drafts = data.drafts || {};
     Object.keys(drafts).forEach(function (key) {
       var rec = drafts[key] || {};
-      if (rec.scheduled_time && cells[rec.scheduled_time]) {
+      if (rec.date === day && rec.scheduled_time && cells[rec.scheduled_time]) {
         cells[rec.scheduled_time].drafted = rec.draft_id || rec.material_id;
       }
     });
     var materials = (report && report.materials) || [];
     materials.forEach(function (m) {
-      if (m.suggested_time && cells[m.suggested_time]) { cells[m.suggested_time].suggested = m.material_id; }
+      var mday = m.scheduled_date || m.requested_date;
+      if (m.suggested_time && mday === day && cells[m.suggested_time]) { cells[m.suggested_time].suggested = m.material_id; }
     });
 
     slots.forEach(function (slot) {
@@ -349,6 +393,7 @@
     (report.materials || []).forEach(function (m) { list.appendChild(renderMaterial(m)); });
     if (!(report.materials || []).length) { list.appendChild(el("li", "note-inline", "本次请求没有素材结论")); }
 
+    lastReport = report;
     renderTimeline(state, report);
 
     var summaryFallback = report.status === "step_limit_reached"
@@ -442,6 +487,7 @@
     hideError();
     closeStream();
     finished = false;
+    activeDate = null;
     setRunning(true);
     var offline = $("offline").checked;
     renderEnv(offline);

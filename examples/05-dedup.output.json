@@ -1,6 +1,10 @@
 {
   "run_id": "case05-dedup",
   "date": "2026-11-12",
+  "dates": [
+    "2026-11-12",
+    "2026-11-13"
+  ],
   "status": "completed",
   "completed": true,
   "outcome": "pending_confirmation",
@@ -21,25 +25,30 @@
     {
       "material_id": "M01",
       "title": "城市夜骑 30 秒混剪",
+      "requested_date": "2026-11-12",
       "requested_time": "18:00",
       "time_hard": true,
       "review_status": "pass",
       "risk_reasons": [],
       "missing_fields": [],
+      "scheduled_date": "2026-11-12",
       "suggested_time": "19:00",
       "time_changed": true,
+      "date_changed": false,
       "hard_time_preserved": false,
       "requires_user_confirmation": true,
       "pending_confirmations": [
         {
           "confirmation_id": "C-M01-2026-11-12-1900",
           "question": "18:00 是硬性要求但已被占用，是否同意改到 19:00？",
+          "proposed_date": "2026-11-12",
           "proposed_time": "19:00",
           "status": "pending"
         }
       ],
       "draft": {
         "draft_id": "D-M01-2026-11-12-1800",
+        "scheduled_date": "2026-11-12",
         "scheduled_time": "19:00",
         "status": "draft_pending_confirmation",
         "submit_count": 2,

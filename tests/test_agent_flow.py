@@ -93,6 +93,25 @@ class AgentFlowTest(unittest.TestCase):
         self.assertGreaterEqual(row["failed_save_attempts"], 2)
         self.assertFalse(row["published"])
 
+    def test_multi_day_conflict_stays_pending_on_its_own_day(self) -> None:
+        """11-13 09:00 被 M07 占用：改到 09:30 只能待确认；另一条素材在 11-13 空白时段直接落草稿。"""
+        report = run_example("07-multiday", self.ledger)
+        self.assertEqual(report["date"], "2026-11-12")
+        self.assertEqual(report["dates"], ["2026-11-12", "2026-11-13"])
+        self.assertEqual(report["outcome"], "pending_confirmation")
+        rows = {row["material_id"]: row for row in report["materials"]}
+        m06 = rows["M06"]
+        self.assertEqual(m06["requested_date"], "2026-11-13")
+        self.assertEqual(m06["scheduled_date"], "2026-11-13")
+        self.assertEqual(m06["suggested_time"], "09:30")
+        self.assertTrue(m06["requires_user_confirmation"])
+        self.assertEqual(m06["draft"]["status"], "draft_pending_confirmation")
+        m07 = rows["M07"]
+        self.assertEqual(m07["result_status"], "scheduled_draft")
+        self.assertEqual(m07["scheduled_date"], "2026-11-13")
+        self.assertFalse(m07["published"])
+        self.assertFalse(report["published"])
+
     def test_step_limit_returns_incomplete_status(self) -> None:
         report = run_example("06-step-limit", self.ledger)
         self.assertEqual(report["status"], "step_limit_reached")

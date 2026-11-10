@@ -134,5 +134,79 @@ class ToolboxTest(unittest.TestCase):
         self.assertEqual(result["error"]["code"], "UNKNOWN_TOOL")
 
 
+class MultiDayToolboxTest(unittest.TestCase):
+    """多日排期：占位按天算，跨日改期同样算硬性变更。"""
+
+    def setUp(self) -> None:
+        self._ctx = temp_ledger()
+        self.ledger = self._ctx.__enter__()
+        self.store = Store(DATA_DIR, self.ledger)
+        self.toolbox = Toolbox(
+            self.store,
+            make_run("M06", requested_date="2026-11-13", requested_time="09:00", time_hard=True),
+        )
+
+    def tearDown(self) -> None:
+        self._ctx.__exit__(None, None, None)
+
+    def test_slot_query_uses_the_requested_day(self) -> None:
+        self.toolbox.call("read_material", {"material_id": "M06", "reason": "测试读取"})
+        self.toolbox.call("check_rules", {"material_id": "M06", "reason": "测试校验"})
+        day13 = self.toolbox.call("query_time_slot", {"material_id": "M06", "time": "09:00", "reason": "查 11-13"})
+        day12 = self.toolbox.call(
+            "query_time_slot", {"material_id": "M06", "time": "09:00", "date": "2026-11-12", "reason": "查 11-12"},
+        )
+        self.assertEqual(day13["date"], "2026-11-13")
+        self.assertFalse(day13["available"])
+        self.assertEqual([c["material_id"] for c in day13["conflicts"]], ["M07"])
+        self.assertTrue(day12["available"])
+
+    def test_unknown_date_is_rejected(self) -> None:
+        result = self.toolbox.call(
+            "query_time_slot", {"material_id": "M06", "time": "09:00", "date": "2026-12-24", "reason": "臆造日期"},
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "DATE_NOT_AVAILABLE")
+        self.assertFalse(result["error"]["recoverable"])
+
+    def test_cross_day_change_needs_confirmation_and_records_both_days(self) -> None:
+        self.toolbox.call("read_material", {"material_id": "M06", "reason": "测试读取"})
+        self.toolbox.call("check_rules", {"material_id": "M06", "reason": "测试校验"})
+        blocked = self.toolbox.call(
+            "save_draft", {"material_id": "M06", "scheduled_time": "09:30", "reason": "09:00 被占，改 09:30"},
+        )
+        self.assertFalse(blocked["ok"])
+        self.assertEqual(blocked["error"]["code"], "HARD_CONSTRAINT_VIOLATION")
+
+        self.toolbox.call(
+            "request_confirmation",
+            {"material_id": "M06", "proposed_time": "09:30", "question": "11-13 09:00 被占，改 09:30？", "reason": "硬性要求"},
+        )
+        saved = self.toolbox.call(
+            "save_draft", {"material_id": "M06", "scheduled_time": "09:30", "reason": "已登记待确认"},
+        )
+        self.assertTrue(saved["ok"])
+        self.assertEqual(saved["status"], "draft_pending_confirmation")
+        self.assertEqual(saved["date"], "2026-11-13")
+        self.assertTrue(saved["time_changed"])
+        self.assertFalse(saved["date_changed"])
+        self.assertFalse(saved["published"])
+        stored = self.store.draft("2026-11-13", "M06", "09:00")
+        self.assertIsNotNone(stored)
+        self.assertEqual(stored["requested_date"], "2026-11-13")
+
+    def test_same_time_on_another_day_does_not_conflict(self) -> None:
+        box = Toolbox(self.store, make_run("M06", requested_date="2026-11-13", requested_time="09:00"))
+        box.call("read_material", {"material_id": "M06", "reason": "测试读取"})
+        box.call("check_rules", {"material_id": "M06", "reason": "测试校验"})
+        other_day = box.call(
+            "save_draft",
+            {"material_id": "M06", "scheduled_time": "09:00", "date": "2026-11-12", "reason": "挪到 11-12 同一时刻"},
+        )
+        self.assertTrue(other_day["ok"], other_day.get("error"))
+        self.assertTrue(other_day["date_changed"])
+        self.assertEqual(other_day["date"], "2026-11-12")
+
+
 if __name__ == "__main__":
     unittest.main()

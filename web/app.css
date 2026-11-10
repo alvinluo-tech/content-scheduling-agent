@@ -240,6 +240,14 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 .note-inline { font-size: 10.5px; color: var(--ink-3); }
 
 /* ---------- timeline ---------- */
+.day-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.day-tab {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.02em;
+  padding: 3px 9px; border: 1px solid var(--rule-strong); background: transparent;
+  color: var(--ink-2); border-radius: 2px; cursor: pointer; transition: background 120ms ease, color 120ms ease;
+}
+.day-tab:hover { background: var(--paper-2); }
+.day-tab[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .timeline {
   display: grid; grid-template-columns: repeat(24, minmax(0, 1fr));
   height: 42px; margin-top: 10px;

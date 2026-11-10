@@ -12,6 +12,11 @@ REASON_PROP = {
     "description": "本次调用的决策依据：你观察到了什么、为什么现在调用这个工具（写入 trace，必填，一句话）",
 }
 
+DATE_PROP = {
+    "type": "string",
+    "description": "YYYY-MM-DD；省略则用该素材要求的日期。只能填 schedule.json 里配置过的日期",
+}
+
 TOOL_SPECS: list[dict[str, Any]] = [
     {
         "type": "function",
@@ -47,6 +52,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
                 "properties": {
                     "material_id": {"type": "string", "description": "为哪项素材查询时段（用于归因到该素材）"},
                     "time": {"type": "string", "description": "HH:MM，例如 18:00"},
+                    "date": DATE_PROP,
                     "reason": REASON_PROP,
                 },
                 "required": ["material_id", "time", "reason"],
@@ -63,6 +69,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
                 "properties": {
                     "material_id": {"type": "string", "description": "素材 ID"},
                     "proposed_time": {"type": "string", "description": "建议的替代时段 HH:MM"},
+                    "date": DATE_PROP,
                     "question": {"type": "string", "description": "要用户拍板的问题，一句话"},
                     "reason": REASON_PROP,
                 },
@@ -80,6 +87,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
                 "properties": {
                     "material_id": {"type": "string", "description": "素材 ID"},
                     "scheduled_time": {"type": "string", "description": "拟排期时段 HH:MM"},
+                    "date": DATE_PROP,
                     "reason": REASON_PROP,
                 },
                 "required": ["material_id", "scheduled_time", "reason"],
@@ -108,6 +116,22 @@ class Toolbox:
         self.fixed_now = run.get("now")
         self.calls: list[dict[str, Any]] = []
         self.attempts: dict[str, int] = {}
+
+    def request_date(self, material_id: str) -> str:
+        """素材要求的日期；请求没写就用 schedule.json 的默认日期。"""
+        request = self.requests.get(material_id) or {}
+        return str(request.get("requested_date") or self.date)
+
+    def _date_error(self, date: str) -> dict[str, Any] | None:
+        available = self.store.available_dates()
+        if date in available:
+            return None
+        return _err(
+            "DATE_NOT_AVAILABLE",
+            f"{date} 不在可排日期内：{available}",
+            recoverable=False,
+            hint="只能排 schedule.json 里配置的日期；不要臆造日期",
+        )
 
     def clock(self) -> str:
         return self.fixed_now or datetime.now().astimezone().isoformat(timespec="seconds")
@@ -189,9 +213,13 @@ class Toolbox:
         evaluation = evaluate_rules(material, self.store.rules_doc)
         return {"ok": True, "material_id": material_id, **evaluation}
 
-    def query_time_slot(self, material_id: str, time: str, reason: str) -> dict[str, Any]:
+    def query_time_slot(self, material_id: str, time: str, reason: str, date: str | None = None) -> dict[str, Any]:
         if self.store.material(material_id) is None:
             return _err("MATERIAL_NOT_FOUND", f"素材 {material_id} 不存在", recoverable=False)
+        target_date = date or self.request_date(material_id)
+        date_error = self._date_error(target_date)
+        if date_error:
+            return date_error
         hours = self.store.operating_hours()
         grid = slot_grid(hours)
         if time not in grid:
@@ -200,12 +228,12 @@ class Toolbox:
                 f"{time} 不在营业时段 {hours['start']}-{hours['end']} 或不在 {hours['granularity_min']} 分钟网格上",
                 hint=f"可用网格示例：{grid[:4]}",
             )
-        occupied = self.store.occupied_slots(self.date) + self.store.drafted_slots(self.date, exclude_material=material_id)
+        occupied = self.store.occupied_slots(target_date) + self.store.drafted_slots(target_date, exclude_material=material_id)
         conflicts = find_conflicts(occupied, time)
         return {
             "ok": True,
             "material_id": material_id,
-            "date": self.date,
+            "date": target_date,
             "time": time,
             "available": not conflicts,
             "conflicts": conflicts,
@@ -213,11 +241,18 @@ class Toolbox:
             "occupied_count": len(occupied),
         }
 
-    def request_confirmation(self, material_id: str, proposed_time: str, question: str, reason: str) -> dict[str, Any]:
+    def request_confirmation(
+        self, material_id: str, proposed_time: str, question: str, reason: str, date: str | None = None
+    ) -> dict[str, Any]:
         _, request, error = self._material_and_request(material_id)
         if error:
             return error
-        confirmation_id = f"C-{material_id}-{self.date}-{proposed_time.replace(':', '')}"
+        requested_date = self.request_date(material_id)
+        proposed_date = date or requested_date
+        date_error = self._date_error(proposed_date)
+        if date_error:
+            return date_error
+        confirmation_id = f"C-{material_id}-{proposed_date}-{proposed_time.replace(':', '')}"
         existing = self.store.confirmations.get(confirmation_id)
         if existing:
             return {
@@ -231,7 +266,9 @@ class Toolbox:
             }
         record = {
             "confirmation_id": confirmation_id,
-            "date": self.date,
+            "date": proposed_date,
+            "requested_date": requested_date,
+            "proposed_date": proposed_date,
             "material_id": material_id,
             "requested_time": request["requested_time"],
             "proposed_time": proposed_time,
@@ -258,7 +295,7 @@ class Toolbox:
             self.save_failures_left -= 1
         return True
 
-    def save_draft(self, material_id: str, scheduled_time: str, reason: str) -> dict[str, Any]:
+    def save_draft(self, material_id: str, scheduled_time: str, reason: str, date: str | None = None) -> dict[str, Any]:
         material, request, error = self._material_and_request(material_id)
         if error:
             return error
@@ -273,21 +310,30 @@ class Toolbox:
         hours = self.store.operating_hours()
         if scheduled_time not in slot_grid(hours):
             return _err("BAD_TIME", f"{scheduled_time} 不在营业时段或网格上", hint=f"{hours['start']}-{hours['end']}，{hours['granularity_min']} 分钟粒度")
+        requested_date = self.request_date(material_id)
+        scheduled_date = date or requested_date
+        date_error = self._date_error(scheduled_date)
+        if date_error:
+            return date_error
         requested_time = request["requested_time"]
         time_changed = scheduled_time != requested_time
+        date_changed = scheduled_date != requested_date
+        changed = time_changed or date_changed
         # pending 与 approved 都算"用户已看到这个改动"；只有 pending 才需要继续等用户拍板。
         approvals = [
-            c for c in self.store.confirmations_for(self.date, material_id, requested_time)
-            if c["proposed_time"] == scheduled_time and c["status"] in ("pending", "approved")
+            c for c in self.store.confirmations_for(requested_date, material_id, requested_time)
+            if c.get("proposed_date", c.get("date")) == scheduled_date
+            and c["proposed_time"] == scheduled_time
+            and c["status"] in ("pending", "approved")
         ]
         awaiting_user = any(c["status"] == "pending" for c in approvals)
-        if time_changed and request.get("time_hard") and not approvals:
+        if changed and request.get("time_hard") and not approvals:
             return _err(
                 "HARD_CONSTRAINT_VIOLATION",
-                f"发布时间 {requested_time} 是用户硬性要求，改到 {scheduled_time} 必须先获得用户确认",
+                f"{requested_date} {requested_time} 是用户硬性要求，改到 {scheduled_date} {scheduled_time} 必须先获得用户确认",
                 hint="先调用 request_confirmation 登记待确认项，再保存草稿",
             )
-        occupied = self.store.occupied_slots(self.date) + self.store.drafted_slots(self.date, exclude_material=material_id)
+        occupied = self.store.occupied_slots(scheduled_date) + self.store.drafted_slots(scheduled_date, exclude_material=material_id)
         conflicts = find_conflicts(occupied, scheduled_time)
         if conflicts:
             return _err(
@@ -302,15 +348,18 @@ class Toolbox:
                 "草稿保存服务返回失败（存储不可用）",
                 hint="可以重试；若仍失败必须如实报告保存失败，不得声称保存成功",
             )
-        draft_id = f"D-{material_id}-{self.date}-{requested_time.replace(':', '')}"
+        # draft_id 跟“用户要求”走（与去重键一致）：换替代时段重提时 id 不变，改期只体现在 scheduled_time/date。
+        draft_id = f"D-{material_id}-{requested_date}-{requested_time.replace(':', '')}"
         record = {
             "draft_id": draft_id,
-            "date": self.date,
+            "date": scheduled_date,
+            "requested_date": requested_date,
             "material_id": material_id,
             "requested_time": requested_time,
             "scheduled_time": scheduled_time,
             "time_changed": time_changed,
-            "status": "draft_pending_confirmation" if (time_changed and request.get("time_hard") and awaiting_user) else "draft_ready",
+            "date_changed": date_changed,
+            "status": "draft_pending_confirmation" if (changed and request.get("time_hard") and awaiting_user) else "draft_ready",
             "reason": reason,
             "submit_count": 1,
             "updated_at": self.clock(),
@@ -321,9 +370,11 @@ class Toolbox:
             "ok": True,
             "draft_id": stored["draft_id"],
             "material_id": material_id,
+            "date": stored["date"],
             "requested_time": requested_time,
             "scheduled_time": stored["scheduled_time"],
             "time_changed": stored["time_changed"],
+            "date_changed": stored.get("date_changed", False),
             "status": stored["status"],
             "deduplicated": not created,
             "published": False,

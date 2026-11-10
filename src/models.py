@@ -7,6 +7,7 @@ from typing import Any, Sequence
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 
 SYSTEM_TEMPLATE = """你是短视频内容团队的「素材审核与发布排期助手」。今天是 {date}，营业时段 {start}-{end}，{granularity} 分钟粒度。
+可排日期：{dates}（不带日期的请求默认排 {date}）。
 
 本次排期请求（用户原始要求，按顺序处理，共 {count} 条）：
 {requests}
@@ -24,21 +25,29 @@ SYSTEM_TEMPLATE = """你是短视频内容团队的「素材审核与发布排�
 """
 
 
-def build_system_prompt(run: dict[str, Any], schedule_date: str, hours: dict[str, Any]) -> str:
+def build_system_prompt(
+    run: dict[str, Any], schedule_date: str, hours: dict[str, Any], available_dates: Sequence[str] | None = None
+) -> str:
     requests = run.get("requests", [])
     lines = []
     for req in requests:
         hard = "hard=true（不可擅自更改）" if req.get("time_hard") else "hard=false（可协商，但仍需说明）"
         note = f"，备注：{req['note']}" if req.get("note") else ""
-        lines.append(f"- {req['material_id']}：要求 {req['requested_time']} 发布，{hard}{note}")
+        day = req.get("requested_date") or schedule_date
+        lines.append(f"- {req['material_id']}：要求 {day} {req['requested_time']} 发布，{hard}{note}")
+    dates = list(available_dates or [schedule_date])
     return SYSTEM_TEMPLATE.format(
         date=schedule_date,
+        dates="、".join(dates),
         start=hours["start"],
         end=hours["end"],
         granularity=hours["granularity_min"],
         count=len(requests),
         requests="\n".join(lines) if lines else "- 无",
     )
+
+
+DATE_AWARE_TOOLS = {"query_time_slot", "request_confirmation", "save_draft"}
 
 
 class ScriptedChatModel:
@@ -62,7 +71,10 @@ class ScriptedChatModel:
         for req in self.requests:
             action = _next_action(req, history)
             if action is not None:
-                return self._call(*action)
+                name, args = action
+                if name in DATE_AWARE_TOOLS and req.get("requested_date"):
+                    args["date"] = req["requested_date"]
+                return self._call(name, args)
         done = sum(1 for h in history if h["tool"] == "save_draft")
         return AIMessage(
             content=(

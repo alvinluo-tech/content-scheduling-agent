@@ -25,17 +25,22 @@ def load_example(name: str) -> dict[str, Any]:
 def make_run(
     *material_ids: str,
     requested_time: str = "18:00",
+    requested_date: str | None = None,
     time_hard: bool = False,
     save_failures: int = 0,
     now: str = "2026-11-12T09:00:00+08:00",
 ) -> dict[str, Any]:
     """构造最小运行输入；只用本次请求里的素材，符合"只处理待处理素材"的边界。"""
+    requests = []
+    for mid in material_ids:
+        request: dict[str, Any] = {"material_id": mid, "requested_time": requested_time, "time_hard": time_hard}
+        if requested_date:
+            request["requested_date"] = requested_date
+        requests.append(request)
     return {
         "run_id": "unit-test",
         "now": now,
-        "requests": [
-            {"material_id": mid, "requested_time": requested_time, "time_hard": time_hard} for mid in material_ids
-        ],
+        "requests": requests,
         "simulate": {"save_failures": save_failures},
     }
 

@@ -63,6 +63,12 @@ CASE_META: list[dict[str, Any]] = [
         "tag": "上限",
         "note": "max_steps=3，两条素材处理不完，返回明确的未完成状态",
     },
+    {
+        "file": "07-multiday",
+        "title": "多日排期",
+        "tag": "多日",
+        "note": "11-13 09:00 被 M07 占用：硬性要求只能提议 09:30 并待确认；另一条素材在 11-13 空白时段落草稿",
+    },
 ]
 
 RUN_LOCK = threading.Lock()
@@ -82,8 +88,12 @@ def snapshot() -> dict[str, Any]:
     schedule = _load_or_default(DATA_DIR / "schedule.json", {})
     rules = _load_or_default(DATA_DIR / "rules.json", {})
     ledger = _load_or_default(LEDGER_PATH, {"drafts": {}, "confirmations": {}})
+    days = schedule.get("days", {})
+    default_date = schedule.get("date")
     return {
-        "date": schedule.get("date"),
+        "date": default_date,
+        "dates": sorted(days.keys()),
+        "days": {day: days.get(day, []) for day in sorted(days.keys())},
         "channel": schedule.get("channel"),
         "timezone": schedule.get("timezone"),
         "hours": rules.get("operating_hours", {}),
@@ -91,7 +101,7 @@ def snapshot() -> dict[str, Any]:
             {"id": item.get("id"), "name": item.get("name"), "severity": item.get("severity")}
             for item in rules.get("rules", [])
         ],
-        "slots": schedule.get("slots", []),
+        "slots": days.get(default_date, []),
         "drafts": ledger.get("drafts", {}),
         "confirmations": ledger.get("confirmations", {}),
         "cases": CASE_META,
