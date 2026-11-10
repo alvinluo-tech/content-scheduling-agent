@@ -29,6 +29,22 @@
       <h2 class="panel-title">场景<em>9 个用例</em></h2>
       <ol class="cases" id="cases"></ol>
     </section>
+    <details class="panel custom-panel" id="custom-panel">
+      <summary class="panel-title">自定义一次请求<em>不用预置用例</em></summary>
+      <div class="custom-grid">
+        <label class="field">素材<select id="custom-material"></select></label>
+        <label class="field">日期<select id="custom-date"></select></label>
+        <label class="field">时间<input id="custom-time" type="text" value="18:00" inputmode="numeric" maxlength="5" aria-label="期望时间 HH:MM"></label>
+        <label class="field">频道<select id="custom-channel"></select></label>
+        <label class="switch custom-hard">
+          <input type="checkbox" id="custom-hard" checked>
+          <span>硬性要求<em>改时段或改日期要先登记确认</em></span>
+        </label>
+        <button type="button" id="custom-run" class="primary">用这条请求跑一次</button>
+      </div>
+      <p class="fine" id="custom-hint">填的是请求、不是结论：冲突与规则风险仍由工具判定。</p>
+    </details>
+
     <section class="panel run-panel">
       <h2 class="panel-title">执行</h2>
       <label class="switch">

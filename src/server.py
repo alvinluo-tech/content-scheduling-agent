@@ -19,6 +19,7 @@ from urllib.parse import parse_qsl, unquote, urlparse
 from .main import load_env, run_pipeline
 from .markdown import render_report
 from .store import Store
+from .validation import validate_run
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WEB_ROOT = REPO_ROOT / "web"
@@ -139,6 +140,15 @@ def snapshot() -> dict[str, Any]:
             for item in rules.get("rules", [])
         ],
         "slots": days.get(default_date, []),
+        "materials": [
+            {
+                "material_id": key,
+                "title": item.get("title"),
+                "duration_sec": item.get("duration_sec"),
+                "category": item.get("category"),
+            }
+            for key, item in sorted(_load_or_default(DATA_DIR / "materials.json", {}).items())
+        ],
         "drafts": ledger.get("drafts", {}),
         "confirmations": ledger.get("confirmations", {}),
         "cases": CASE_META,
@@ -154,10 +164,56 @@ def _ledger_label() -> str:
 
 
 def read_case_input(case: str) -> dict[str, Any]:
-    """把示例输入读成一次运行请求；场景名必须在白名单里。"""
+    """把示例输入读成一次运行请求；场景名必须在白名单里，或指向本次会话登记的自定义请求。"""
+    with CUSTOM_LOCK:
+        if case in CUSTOM_RUNS:
+            return json.loads(json.dumps(CUSTOM_RUNS[case]))
     if case not in {item["file"] for item in CASE_META}:
         raise ValueError("未知场景：" + (case or "(空)"))
     return json.loads((EXAMPLES_DIR / (case + ".input.json")).read_text(encoding="utf-8"))
+
+
+# 界面里填的自定义请求只活在这一次服务里：注册一个编号，之后仍走同一条 /api/stream 链路。
+CUSTOM_RUNS: dict[str, dict[str, Any]] = {}
+CUSTOM_LOCK = threading.Lock()
+CUSTOM_SEQ = [0]
+
+
+def register_custom(body: dict[str, Any]) -> dict[str, Any]:
+    """把界面上填的一条请求变成与示例同形状的 input，校验后登记成可重复运行的编号。"""
+    requests = body.get("requests")
+    if not isinstance(requests, list) or not requests:
+        raise ValueError("自定义请求至少要有一条")
+    cleaned: list[dict[str, Any]] = []
+    for item in requests:
+        if not isinstance(item, dict):
+            raise ValueError("自定义请求的每一条都必须是对象")
+        entry = {
+            "material_id": str(item.get("material_id") or "").strip(),
+            "requested_time": str(item.get("requested_time") or "").strip(),
+            "time_hard": bool(item.get("time_hard")),
+            "note": str(item.get("note") or "界面里手填的请求"),
+        }
+        for key in ("requested_date", "requested_channel"):
+            value = str(item.get(key) or "").strip()
+            if value:
+                entry[key] = value
+        cleaned.append(entry)
+    max_steps = body.get("max_steps")
+    run: dict[str, Any] = {
+        "now": str(body.get("now") or "2026-11-12T09:20:00+08:00"),
+        "requests": cleaned,
+        "simulate": {"save_failures": 0},
+    }
+    if max_steps not in (None, ""):
+        run["options"] = {"max_steps": int(max_steps)}
+    validate_run(run)
+    with CUSTOM_LOCK:
+        CUSTOM_SEQ[0] += 1
+        case = "custom-" + str(CUSTOM_SEQ[0])
+        run["run_id"] = case
+        CUSTOM_RUNS[case] = run
+    return {"status": "ok", "case": case, "run": run}
 
 
 def run_case(body: dict[str, Any]) -> dict[str, Any]:
@@ -345,6 +401,13 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(400, {"status": "error", "error": str(exc)})
                     return
                 self._json(200, {"status": "ok", "confirmation": record, "state": snapshot()})
+            return
+        if path == "/api/custom":
+            with RUN_LOCK:
+                try:
+                    self._json(200, register_custom(body))
+                except (ValueError, TypeError) as exc:
+                    self._json(400, {"status": "error", "error": str(exc)})
             return
         if path == "/api/run":
             with RUN_LOCK:

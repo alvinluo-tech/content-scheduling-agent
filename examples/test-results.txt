@@ -33,6 +33,8 @@ test_ranking_without_an_anchor_starts_at_the_day_opening (tests.test_policy.Poli
 test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_grid_matches_operating_hours) ... ok
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
+test_custom_request_is_validated_like_the_cli (tests.test_server.ServerTestCase.test_custom_request_is_validated_like_the_cli) ... ok
+test_custom_request_runs_through_the_same_pipeline (tests.test_server.ServerTestCase.test_custom_request_runs_through_the_same_pipeline) ... ok
 test_human_approval_turns_pending_draft_into_ready (tests.test_server.ServerTestCase.test_human_approval_turns_pending_draft_into_ready) ... ok
 test_human_can_replan_to_another_slot_instead_of_accepting (tests.test_server.ServerTestCase.test_human_can_replan_to_another_slot_instead_of_accepting) ... ok
 test_human_rejection_voids_the_draft_and_stops_the_same_plan (tests.test_server.ServerTestCase.test_human_rejection_voids_the_draft_and_stops_the_same_plan) ... ok
@@ -45,6 +47,7 @@ test_report_never_claims_publication (tests.test_server.ServerTestCase.test_repo
 test_reset_clears_ledger (tests.test_server.ServerTestCase.test_reset_clears_ledger) ... ok
 test_run_conflict_case_saves_draft_without_publishing (tests.test_server.ServerTestCase.test_run_conflict_case_saves_draft_without_publishing) ... ok
 test_state_endpoint_describes_the_workbench (tests.test_server.ServerTestCase.test_state_endpoint_describes_the_workbench) ... ok
+test_state_exposes_materials_for_the_custom_form (tests.test_server.ServerTestCase.test_state_exposes_materials_for_the_custom_form) ... ok
 test_static_css_is_served_with_right_content_type (tests.test_server.ServerTestCase.test_static_css_is_served_with_right_content_type) ... ok
 test_stream_pushes_steps_before_the_final_report (tests.test_server.ServerTestCase.test_stream_pushes_steps_before_the_final_report) ... ok
 test_stream_rejects_unknown_case_before_opening_stream (tests.test_server.ServerTestCase.test_stream_rejects_unknown_case_before_opening_stream) ... ok
@@ -85,6 +88,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 80 tests in 7.950s
+Ran 83 tests in 5.819s
 
 OK

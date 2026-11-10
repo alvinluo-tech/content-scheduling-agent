@@ -133,6 +133,34 @@ class ServerTestCase(unittest.TestCase):
                     name, payload = None, None
         return events
 
+    def test_custom_request_runs_through_the_same_pipeline(self) -> None:
+        status, body = self.post("/api/custom", {"requests": [
+            {"material_id": "M01", "requested_date": "2026-11-12", "requested_time": "18:00", "time_hard": True}
+        ]})
+        self.assertEqual(status, 200)
+        case = body["case"]
+        self.assertTrue(case.startswith("custom-"))
+        events = self.stream("/api/stream?case=" + case + "&offline=1&reset=1")
+        report = [payload for name, payload in events if name == "report"][0]["report"]
+        self.assertEqual(report["run_id"], case)
+        self.assertEqual(report["outcome"], "pending_confirmation")
+        self.assertFalse(report["published"])
+
+    def test_custom_request_is_validated_like_the_cli(self) -> None:
+        status, body = self.post("/api/custom", {"requests": [
+            {"material_id": "M01", "requested_time": "18:00"},
+            {"material_id": "M01", "requested_time": "19:00"},
+        ]})
+        self.assertEqual(status, 400)
+        self.assertIn("同时出现在", body["error"])
+
+    def test_state_exposes_materials_for_the_custom_form(self) -> None:
+        status, raw = self.get("/api/state")
+        self.assertEqual(status, 200)
+        ids = [item["material_id"] for item in json.loads(raw.decode("utf-8"))["state"]["materials"]]
+        self.assertIn("M01", ids)
+        self.assertIn("M07", ids)
+
     def test_stream_pushes_steps_before_the_final_report(self) -> None:
         events = self.stream("/api/stream?case=02-conflict&offline=1&reset=1")
         names = [name for name, _ in events]

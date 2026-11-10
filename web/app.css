@@ -79,7 +79,7 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 .rail-left {
   display: flex; flex-direction: column;
   border-right: 1px solid var(--rule); background: var(--paper-2);
-  min-height: calc(100vh - 60px); overflow: hidden;
+  height: calc(100vh - 60px); overflow: hidden;
 }
 .rail-right {
   border-left: 1px solid var(--rule); background: var(--paper-2);
@@ -153,6 +153,29 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 .primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .kbd { font: 9.5px var(--mono); letter-spacing: 0.08em; opacity: 0.55; }
 .fine { font-size: 10.5px; color: var(--ink-3); line-height: 1.5; }
+
+/* ---------- 自定义请求 ---------- */
+.custom-panel { flex: 0 0 auto; max-height: 46vh; overflow-y: auto; padding: 12px 16px 14px; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+.custom-panel summary {
+  display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none;
+  margin-bottom: 0; color: var(--ink-2);
+}
+.custom-panel summary::-webkit-details-marker { display: none; }
+.custom-panel summary::before { content: "+"; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.custom-panel[open] summary::before { content: "−"; }
+.custom-panel[open] summary { margin-bottom: 10px; }
+.run-panel { flex: 0 0 auto; }
+.custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; align-items: center; }
+.custom-grid select {
+  min-width: 0; max-width: 108px; padding: 3px 5px; font: 11px var(--mono);
+  background: var(--paper); border: 1px solid var(--rule-strong); color: var(--ink);
+}
+.custom-grid .field { flex-direction: column; align-items: stretch; gap: 3px; font-size: 11px; }
+.custom-grid select { max-width: none; width: 100%; }
+.custom-grid input[type="text"] { width: 100%; }
+.custom-grid .primary, .custom-hard { grid-column: 1 / -1; }
+.custom-hard { font-size: 11.5px; }
+.custom-hard em { font-size: 10px; }
 
 /* ---------- work column ---------- */
 .work { padding: 20px 24px 38px; display: flex; flex-direction: column; gap: 18px; }
@@ -365,7 +388,7 @@ input:focus-visible {
   .topbar { position: static; flex-wrap: wrap; gap: 10px 18px; }
   .grid { grid-template-columns: 1fr; }
   .rail { position: static; max-height: none; min-height: 0; }
-  .rail-left { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .rail-left { height: auto; border-right: 0; border-bottom: 1px solid var(--rule); }
   .rail-right { border-left: 0; border-top: 1px solid var(--rule); }
   .material { grid-template-columns: 1fr; }
   .timeline { height: 28px; }

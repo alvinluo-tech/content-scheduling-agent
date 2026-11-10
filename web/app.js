@@ -423,7 +423,11 @@
 
     var facts = el("div", "m-facts");
     facts.appendChild(el("span", null, "要求 " + when(m.requested_date, m.requested_time) + (m.time_hard ? " · 硬性" : " · 可调整")));
-    facts.appendChild(el("span", null, "建议 " + when(m.scheduled_date || m.requested_date, m.suggested_time)));
+    if (m.suggested_time) {
+      facts.appendChild(el("span", null, "建议 " + when(m.scheduled_date || m.requested_date, m.suggested_time)));
+    } else {
+      facts.appendChild(el("span", null, "建议 · 暂无可用时段"));
+    }
     if (m.time_changed) { facts.appendChild(el("span", null, "已改时段")); }
     if (m.date_changed) { facts.appendChild(el("span", null, "已改日期")); }
     if (m.time_hard && m.hard_time_preserved === false) { facts.appendChild(el("span", "flag", "硬性要求未满足")); }
@@ -670,6 +674,7 @@
       finished = true;
       state = payload.state;
       renderMeta(state);
+      renderCustom(state);
       renderReport(payload.report, payload.trace);
       renderDuration();
       $("results").classList.remove("stale");
@@ -716,11 +721,64 @@
     });
   }
 
+  /* ---------- 自定义请求 ---------- */
+  function fillSelect(node, items, keep) {
+    var current = keep && node.value;
+    clear(node);
+    items.forEach(function (item) {
+      var opt = el("option", null, item.label);
+      opt.value = item.value;
+      node.appendChild(opt);
+    });
+    if (current) {
+      var hit = items.filter(function (item) { return item.value === current; })[0];
+      if (hit) { node.value = current; }
+    }
+  }
+
+  function renderCustom(data) {
+    var materials = (data.materials || []).map(function (item) {
+      return { value: item.material_id, label: item.material_id + " · " + text(item.title) };
+    });
+    fillSelect($("custom-material"), materials, true);
+    fillSelect($("custom-date"), (data.dates || []).map(function (day) { return { value: day, label: day }; }), true);
+    fillSelect($("custom-channel"), channelList(data).map(function (item) {
+      return { value: item.name, label: item.label };
+    }), true);
+  }
+
+  function runCustom(btn) {
+    if (running) { return; }
+    var body = {
+      requests: [{
+        material_id: $("custom-material").value,
+        requested_date: $("custom-date").value,
+        requested_time: $("custom-time").value.trim(),
+        requested_channel: $("custom-channel").value,
+        time_hard: $("custom-hard").checked
+      }],
+      max_steps: $("max-steps").value || undefined
+    };
+    btn.disabled = true;
+    fetchJSON("/api/custom", { method: "POST", body: JSON.stringify(body) }).then(function (payload) {
+      btn.disabled = false;
+      selected = payload.case;
+      select(selected);  // 自定义请求不在场景列表里，选中态全部清掉
+      $("custom-hint").textContent = "本轮请求：" + body.requests[0].material_id + " · "
+        + body.requests[0].requested_date + " " + body.requests[0].requested_time + "（" + payload.case + "）";
+      run();
+    }).catch(function (err) {
+      btn.disabled = false;
+      showError(err.message || String(err));
+    });
+  }
+
   function boot() {
     fetchJSON("/api/state").then(function (payload) {
       state = payload.state;
       renderMeta(state);
       renderCases(state.cases || []);
+      renderCustom(state);
       renderTimeline(state, null);
       select(selected);
       return run();
@@ -729,6 +787,7 @@
     });
 
     $("run").addEventListener("click", run);
+    $("custom-run").addEventListener("click", function () { runCustom(this); });
     $("offline").addEventListener("change", function () { renderEnv(this.checked); });
     document.addEventListener("keydown", function (event) {
       if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
