@@ -110,6 +110,7 @@
 .venv/Scripts/python.exe -m src.main --input examples/04-save-failure.input.json --out examples/04-save-failure.live.output.json --trace examples/04-save-failure.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/07-multiday.input.json --out examples/07-multiday.live.output.json --trace examples/07-multiday.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/08-day-overflow.input.json --out examples/08-day-overflow.live.output.json --trace examples/08-day-overflow.live.trace.json --report-md examples/08-day-overflow.live.report.md
+.venv/Scripts/python.exe -m src.main --input examples/09-channel.input.json --out examples/09-channel.live.output.json --trace examples/09-channel.live.trace.json --report-md examples/09-channel.live.report.md --ledger .runtime/live09.json
 # 先跑一次留下待确认项，再否决它并用真实模型重跑：模型不会绕过否决
 .venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline --ledger .runtime/rejected.json
 .venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --ledger .runtime/rejected.json --reject C-M01-2026-11-12-1900 --out examples/02-conflict-rejected.live.output.json --trace examples/02-conflict-rejected.live.trace.json --report-md examples/02-conflict-rejected.live.report.md
@@ -119,6 +120,7 @@
 | --- | --- | --- | --- |
 | 02-conflict | 第 1 轮并行 `read_material` + `check_rules` → 第 2 轮 `query_time_slot`(18:00) 看到被 M00 占用 → 第 3 轮 `request_confirmation`(C-M01-2026-11-12-1900) → 第 4 轮 `save_draft`(19:00) | completed / pending_confirmation，5 次工具调用 / 5 轮；`draft_pending_confirmation`、`published=false` | Mock 串行 6 轮；真实模型把两个无依赖的读取并行发出，少一轮，决策顺序与结论一致 |
 | 04-save-failure | 第 1 轮并行 `read_material` + `check_rules` + `query_time_slot`(15:00) → 第 2 轮 `save_draft` 收 `SAVE_FAILED` → 第 3 轮重试一次仍失败 → 收尾 | completed / failed，5 次工具调用 / 4 轮；`failed_save_attempts=2`、无草稿 | Mock 串行 5 轮；结论相同（重试一次后如实放弃） |
+| 09-channel | 第 1 轮并行 `read_material`×2 → 第 2 轮并行 `check_rules`×2 → 第 3 轮并行 `query_time_slot`(shorts 12:00 / 13:00) → 第 4 轮并行 `request_confirmation`(C-M02-2026-11-12-1230-shorts) + `save_draft`(M06 13:00) → 第 5 轮 `save_draft`(M02 12:30) | completed / pending_confirmation，9 次工具调用 / 6 轮；M02 `draft_pending_confirmation`、M06 `draft_ready`，两条 `channel=shorts`、`published=false` | Mock 10 轮；真实模型每次调用都显式带上 `channel=shorts`，没有被主频道同名时段带跑；确认项 id 也带 `-shorts` |
 | 07-multiday | 并行读两条素材 → 分别 `query_time_slot`(11-13 09:00 / 20:00) → 对 09:00 的冲突 `request_confirmation`(C-M06-2026-11-13-0930) → 两条 `save_draft`(09:30 待确认 / 20:00 直接存) | completed / pending_confirmation，9 次工具调用 / 8 轮；M06 `scheduled_date=2026-11-13`、09:30、`draft_pending_confirmation`；M07 20:00 `draft_ready`；`published=false` | Mock 10 轮；真实模型同样按天归因、只对冲突那条请求确认，另一条不打扰用户 |
 | 08-day-overflow | `read_material` → `check_rules` → `query_time_slot`(11-14 18:00) 看到整日 24 格已满、收 `next_available=2026-11-15 09:30` → `request_confirmation`(C-M01-2026-11-15-0930) → `save_draft`(11-15 09:30) | completed / pending_confirmation，5 次工具调用 / 5 轮；`date_changed=true`、`draft_pending_confirmation`、`published=false`；总结里写「没有擅自抢 M05 的时段，也没有直接改期」 | 与 Mock 的 5 次调用 / 6 轮几乎同构；真实模型额外把「或由人工协调释放 18:00」作为第二个选项交回用户 |
 
@@ -133,5 +135,8 @@
 
 5. **多日同样成立**：07 的真实 trace 里，模型对 11-13 的两条请求分别按天查询占位，
    只对"硬性时间被占"的那条登记确认、另一条直接落草稿——没有把两条请求的时间口径串在一起。
+6. **频道隔离同样成立**：09 的真实 trace 里，模型 9 次调用全部显式带 `channel=shorts`，
+   `query_time_slot` 报「12:00 被 M00 占用」时它没有去主频道找同名时段腾挪，
+   确认项与草稿 id 都带 `-shorts` 后缀；12:30 那条仍然只登记待确认，13:00 那条直接落草稿。
 
 边界：每条路径只跑一次，样本量不足以证明稳定的决策质量；真实模型 trace 不进 CI（依赖外部 API 与配额）。
