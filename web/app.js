@@ -404,6 +404,24 @@
           reject.addEventListener("click", function () { decide(item.confirmation_id, reject, "reject"); });
           actions.appendChild(approve);
           actions.appendChild(reject);
+          var options = (m.slot_options || []).filter(function (o) { return o.time !== item.proposed_time || o.date !== item.proposed_date; });
+          if (options.length) {
+            var pick = el("select", "confirm-pick");
+            pick.setAttribute("aria-label", "改到工具给过的其它时段");
+            options.forEach(function (o) {
+              var opt = el("option", null, o.date + " " + o.time);
+              opt.value = o.date + "|" + o.time;
+              pick.appendChild(opt);
+            });
+            var replan = el("button", "confirm-btn replan", "改到所选时段");
+            replan.type = "button";
+            replan.addEventListener("click", function () {
+              var parts = (pick.value || "").split("|");
+              decide(item.confirmation_id, replan, "replan", { date: parts[0], time: parts[1] });
+            });
+            actions.appendChild(pick);
+            actions.appendChild(replan);
+          }
           conf.appendChild(actions);
         }
         list.appendChild(conf);
@@ -600,15 +618,17 @@
   }
 
   /* 人工决策走 /api/confirm 与 /api/reject：模型工具集里没有这两个动作，只有人点这一下才算拍板。 */
-  function decide(confirmationId, btn, action) {
+  function decide(confirmationId, btn, action, extra) {
     if (running) { return; }
     var idle = btn.textContent;
     btn.disabled = true;
     btn.textContent = "记录中…";
+    var payload = { confirmation_id: confirmationId };
+    if (extra && extra.time) { payload.time = extra.time; payload.date = extra.date; }
     fetchJSON(action === "approve" ? "/api/confirm" : "/api/reject", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmation_id: confirmationId })
+      body: JSON.stringify(payload)
     }).then(function (payload) {
       state = payload.state || state;
       renderMeta(state);

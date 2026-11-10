@@ -310,8 +310,15 @@ class Handler(BaseHTTPRequestHandler):
             with RUN_LOCK:
                 try:
                     store = Store(DATA_DIR, LEDGER_PATH)
-                    record = store.reject_confirmation(
-                        str(body.get("confirmation_id") or ""), note=str(body.get("note") or "")
+                    confirmation_id = str(body.get("confirmation_id") or "")
+                    chosen = str(body.get("time") or "").strip()
+                    # 人可以直接否决，也可以"否决这个、改到我自己挑的时段"：后者登记一条 approved。
+                    record = (
+                        store.replan_confirmation(
+                            confirmation_id, chosen, date=str(body.get("date") or "").strip() or None
+                        )
+                        if chosen
+                        else store.reject_confirmation(confirmation_id, note=str(body.get("note") or ""))
                     )
                 except ValueError as exc:
                     self._json(400, {"status": "error", "error": str(exc)})

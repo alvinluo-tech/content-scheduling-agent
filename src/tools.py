@@ -116,6 +116,7 @@ class Toolbox:
         self.fixed_now = run.get("now")
         self.calls: list[dict[str, Any]] = []
         self.attempts: dict[str, int] = {}
+        self.last_query: dict[str, dict[str, Any]] = {}
 
     def request_date(self, material_id: str) -> str:
         """素材要求的日期；请求没写就用 schedule.json 的默认日期。"""
@@ -159,6 +160,8 @@ class Toolbox:
                     result = handler(**args)
                 except Exception as exc:  # 工具内部异常必须变成可观察结果，而不是中断执行
                     result = _err("TOOL_CRASH", f"{name} 内部异常：{type(exc).__name__}: {exc}", recoverable=False)
+        if name == "query_time_slot" and result.get("ok") and args.get("material_id"):
+            self.last_query[args["material_id"]] = result  # 报告要用人看过的候选时段，不必翻 trace
         self.calls.append({"tool": name, "args": args, "ok": bool(result.get("ok")), "summary": self.summary_of(name, result)})
         return result
 

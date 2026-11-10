@@ -1,3 +1,5 @@
+test_after_a_human_replan_the_model_moves_to_the_picked_slot (tests.test_agent_flow.AgentFlowTest.test_after_a_human_replan_the_model_moves_to_the_picked_slot)
+人改选 19:30 后重跑：模型先撞 CONFIRMATION_REJECTED，再改存 19:30，报告落 draft_ready。 ... ok
 test_conflict_prerecorded_confirmation_is_reused (tests.test_agent_flow.AgentFlowTest.test_conflict_prerecorded_confirmation_is_reused) ... ok
 test_duplicate_submission_creates_one_draft (tests.test_agent_flow.AgentFlowTest.test_duplicate_submission_creates_one_draft) ... ok
 test_full_day_moves_to_the_next_day_only_with_a_confirmation (tests.test_agent_flow.AgentFlowTest.test_full_day_moves_to_the_next_day_only_with_a_confirmation)
@@ -31,6 +33,7 @@ test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_g
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
 test_human_approval_turns_pending_draft_into_ready (tests.test_server.ServerTestCase.test_human_approval_turns_pending_draft_into_ready) ... ok
+test_human_can_replan_to_another_slot_instead_of_accepting (tests.test_server.ServerTestCase.test_human_can_replan_to_another_slot_instead_of_accepting) ... ok
 test_human_rejection_voids_the_draft_and_stops_the_same_plan (tests.test_server.ServerTestCase.test_human_rejection_voids_the_draft_and_stops_the_same_plan) ... ok
 test_index_is_served (tests.test_server.ServerTestCase.test_index_is_served) ... ok
 test_index_keeps_the_keyboard_and_screen_reader_hooks (tests.test_server.ServerTestCase.test_index_keeps_the_keyboard_and_screen_reader_hooks) ... ok
@@ -56,6 +59,7 @@ test_unknown_date_is_rejected (tests.test_tools.MultiDayToolboxTest.test_unknown
 test_confirmed_hard_time_change_saves_draft_without_publishing (tests.test_tools.ToolboxTest.test_confirmed_hard_time_change_saves_draft_without_publishing) ... ok
 test_duplicate_submission_is_deduplicated (tests.test_tools.ToolboxTest.test_duplicate_submission_is_deduplicated) ... ok
 test_hard_time_change_requires_confirmation (tests.test_tools.ToolboxTest.test_hard_time_change_requires_confirmation) ... ok
+test_human_replan_approves_the_slot_they_picked (tests.test_tools.ToolboxTest.test_human_replan_approves_the_slot_they_picked) ... ok
 test_material_outside_request_scope_is_rejected (tests.test_tools.ToolboxTest.test_material_outside_request_scope_is_rejected) ... ok
 test_missing_reason_is_rejected (tests.test_tools.ToolboxTest.test_missing_reason_is_rejected) ... ok
 test_occupied_slot_is_rejected (tests.test_tools.ToolboxTest.test_occupied_slot_is_rejected) ... ok
@@ -69,6 +73,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 65 tests in 7.346s
+Ran 68 tests in 6.745s
 
 OK

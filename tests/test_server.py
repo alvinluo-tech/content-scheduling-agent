@@ -203,6 +203,33 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(after["draft"]["status"], "draft_ready")
         self.assertFalse(report["published"])
 
+    def test_human_can_replan_to_another_slot_instead_of_accepting(self) -> None:
+        status, body = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
+        self.assertEqual(status, 200)
+        material = body["report"]["materials"][0]
+        self.assertTrue(material["slot_options"])  # 工具给过的候选，界面上供人改选
+        confirmation_id = material["pending_confirmations"][0]["confirmation_id"]
+
+        status, replanned = self.post(
+            "/api/reject", {"confirmation_id": confirmation_id, "time": "19:30", "date": "2026-11-12"}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(replanned["confirmation"]["status"], "approved")
+        self.assertEqual(replanned["confirmation"]["proposed_time"], "19:30")
+        self.assertEqual(replanned["confirmation"]["replanned_from"], confirmation_id)
+
+        status, again = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": False})
+        self.assertEqual(status, 200)
+        report = again["report"]
+        after = report["materials"][0]
+        self.assertEqual(report["outcome"], "scheduled")
+        self.assertEqual(after["suggested_time"], "19:30")
+        self.assertFalse(after["requires_user_confirmation"])
+        self.assertEqual(after["draft"]["status"], "draft_ready")
+        self.assertEqual(after["draft"]["draft_id"], "D-M01-2026-11-12-1800")
+        self.assertIn(confirmation_id, after["rejected_confirmations"])
+        self.assertFalse(report["published"])
+
     def test_markdown_export_needs_a_run_then_serves_the_last_one(self) -> None:
         with server.REPORT_LOCK:
             server.LAST_REPORT.clear()

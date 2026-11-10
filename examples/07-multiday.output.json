@@ -50,6 +50,23 @@
           "status": "pending"
         }
       ],
+      "slot_options": [
+        {
+          "date": "2026-11-13",
+          "time": "09:30",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-13",
+          "time": "10:00",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-13",
+          "time": "10:30",
+          "kind": "same_day"
+        }
+      ],
       "draft": {
         "draft_id": "D-M06-2026-11-13-0900",
         "scheduled_date": "2026-11-13",
@@ -79,6 +96,13 @@
       "requires_user_confirmation": false,
       "rejected_confirmations": [],
       "pending_confirmations": [],
+      "slot_options": [
+        {
+          "date": "2026-11-13",
+          "time": "20:30",
+          "kind": "same_day"
+        }
+      ],
       "draft": {
         "draft_id": "D-M07-2026-11-13-2000",
         "scheduled_date": "2026-11-13",

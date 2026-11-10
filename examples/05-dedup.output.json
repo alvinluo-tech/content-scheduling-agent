@@ -49,6 +49,23 @@
           "status": "pending"
         }
       ],
+      "slot_options": [
+        {
+          "date": "2026-11-12",
+          "time": "19:00",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "19:30",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "20:30",
+          "kind": "same_day"
+        }
+      ],
       "draft": {
         "draft_id": "D-M01-2026-11-12-1800",
         "scheduled_date": "2026-11-12",

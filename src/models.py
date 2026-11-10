@@ -142,7 +142,17 @@ def _next_action(req: dict[str, Any], history: list[dict[str, Any]]) -> tuple[st
                     "reason": "保存返回失败，重试一次确认是偶发还是持续失败",
                 }
             return None
-        if code == "CONFIRMATION_REJECTED":
+        if code == "CONFIRMATION_REJECTED" or (code == "HARD_CONSTRAINT_VIOLATION" and confirm is not None):
+            # 人否决了提的时段、或人改选的时段不是这一个：换工具给过的下一个候选，别绕回已经失败的时段。
+            tried = {c["args"].get("scheduled_time") for c in calls if c["tool"] == "save_draft"}
+            alternatives = (query or {}).get("result", {}).get("alternatives") or []
+            spare = next((t for t in alternatives if t not in tried), None)
+            if spare:
+                return "save_draft", {
+                    **_proposal_args(material_id, _proposal(query, req)),
+                    "scheduled_time": spare,
+                    "reason": f"{save['args'].get('scheduled_time')} 没被采纳（{code}），改选下一个候选 {spare} 再存一次",
+                }
             return None
         if code == "HARD_CONSTRAINT_VIOLATION" and confirm is None:
             proposal = _proposal(query, req)

@@ -112,6 +112,22 @@ class AgentFlowTest(unittest.TestCase):
         self.assertFalse(m07["published"])
         self.assertFalse(report["published"])
 
+    def test_after_a_human_replan_the_model_moves_to_the_picked_slot(self) -> None:
+        """人改选 19:30 后重跑：模型先撞 CONFIRMATION_REJECTED，再改存 19:30，报告落 draft_ready。"""
+        from src.store import Store
+
+        run_example("02-conflict", self.ledger)
+        store = Store(str(EXAMPLES_DIR.parent / "data"), str(self.ledger))
+        store.replan_confirmation("C-M01-2026-11-12-1900", "19:30")
+
+        report = run_example("02-conflict", self.ledger)
+        row = report["materials"][0]
+        self.assertEqual(report["outcome"], "scheduled")
+        self.assertEqual(row["suggested_time"], "19:30")
+        self.assertFalse(row["requires_user_confirmation"])
+        self.assertEqual(row["draft"]["status"], "draft_ready")
+        self.assertFalse(report["published"])
+
     def test_full_day_moves_to_the_next_day_only_with_a_confirmation(self) -> None:
         """11-14 整日排满：模型只能顺延到 11-15 09:30，并且必须先登记待确认项。"""
         report = run_example("08-day-overflow", self.ledger)

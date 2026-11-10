@@ -48,6 +48,23 @@
       "requires_user_confirmation": false,
       "rejected_confirmations": [],
       "pending_confirmations": [],
+      "slot_options": [
+        {
+          "date": "2026-11-12",
+          "time": "11:30",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "12:00",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "12:30",
+          "kind": "same_day"
+        }
+      ],
       "draft": null,
       "failed_save_attempts": 0,
       "published": false,
@@ -70,6 +87,7 @@
       "requires_user_confirmation": false,
       "rejected_confirmations": [],
       "pending_confirmations": [],
+      "slot_options": [],
       "draft": null,
       "failed_save_attempts": 0,
       "published": false,

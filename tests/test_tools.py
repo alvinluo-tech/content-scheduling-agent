@@ -79,6 +79,30 @@ class ToolboxTest(unittest.TestCase):
         slot = self.toolbox.call("query_time_slot", {"material_id": "M01", "time": "18:00", "reason": "否决后重查替代"})
         self.assertIn("19:00", slot["alternatives"])
 
+    def test_human_replan_approves_the_slot_they_picked(self) -> None:
+        self.read_and_check("M01")
+        self.toolbox.call(
+            "request_confirmation",
+            {"material_id": "M01", "proposed_time": "19:00", "question": "改到 19:00？", "reason": "硬性要求不能擅自改"},
+        )
+        self.assertTrue(self.toolbox.call("save_draft", {"material_id": "M01", "scheduled_time": "19:00", "reason": "先存待确认草稿"})["ok"])
+
+        counter = self.store.replan_confirmation("C-M01-2026-11-12-1900", "19:30")
+        self.assertEqual(counter["status"], "approved")
+        self.assertEqual(counter["confirmation_id"], "C-M01-2026-11-12-1930")
+        self.assertEqual(counter["replanned_from"], "C-M01-2026-11-12-1900")
+        self.assertEqual(self.store.confirmations["C-M01-2026-11-12-1900"]["status"], "rejected")
+        self.assertEqual(self.store.draft("2026-11-12", "M01", "18:00")["status"], "draft_rejected")
+
+        picked = self.toolbox.call("save_draft", {"material_id": "M01", "scheduled_time": "19:30", "reason": "人改选了 19:30"})
+        self.assertTrue(picked["ok"])
+        self.assertEqual(picked["status"], "draft_ready")
+        self.assertFalse(picked["published"])
+        self.assertEqual(picked["draft_id"], "D-M01-2026-11-12-1800")
+        # 原来那版仍然进不去
+        blocked = self.toolbox.call("save_draft", {"material_id": "M01", "scheduled_time": "19:00", "reason": "再试原方案"})
+        self.assertEqual(blocked["error"]["code"], "CONFIRMATION_REJECTED")
+
     def test_slot_query_explains_why_a_slot_is_recommended(self) -> None:
         slot = self.toolbox.call("query_time_slot", {"material_id": "M01", "time": "18:00", "reason": "查冲突与替代"})
         ranked = slot["ranked_alternatives"]

@@ -336,6 +336,8 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
 }
 .confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .confirm-btn.reject { color: var(--ink-2); border-style: dashed; }
+.confirm-pick { font-family: var(--mono); font-size: 10.5px; padding: 3px 5px; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--paper); color: var(--ink-2); }
+.confirm-btn.replan { border-style: dotted; color: var(--ink-2); }
 .confirm-btn.reject:hover { background: transparent; border-color: var(--ink-3); color: var(--ink); }
 .confirm-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
 .confirm-btn:disabled { opacity: 0.55; cursor: default; }

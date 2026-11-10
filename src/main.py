@@ -69,33 +69,47 @@ def run_pipeline(
 
 
 def apply_approvals(args: argparse.Namespace) -> None:
-    """人工决策通道（模型没有这些工具）：同意落成 approved，否决落成 rejected 并作废那份草稿。"""
+    """人工决策通道（模型没有这些工具）：同意落 approved；否决落 rejected 并作废草稿；改选落一条 approved。"""
     approved = getattr(args, "approve", None) or []
     rejected = getattr(args, "reject", None) or []
-    if not approved and not rejected:
+    replanned = getattr(args, "replan", None) or []
+    if not approved and not rejected and not replanned:
         return
     store = Store(args.data_dir, args.ledger)
-    for ids, action in ((approved, "approve"), (rejected, "reject")):
-        for confirmation_id in ids:
-            record = (
-                store.approve_confirmation(confirmation_id)
-                if action == "approve"
-                else store.reject_confirmation(confirmation_id)
-            )
-            print(
-                json.dumps(
-                    {
-                        "status": record["status"],
-                        "confirmation_id": record["confirmation_id"],
-                        "material_id": record["material_id"],
-                        "proposed_date": record.get("proposed_date", record.get("date")),
-                        "proposed_time": record["proposed_time"],
-                        "decided_by": record.get("approved_by") or record.get("rejected_by"),
-                    },
-                    ensure_ascii=False,
-                ),
-                file=sys.stderr,
-            )
+    decisions = [(cid, "approve") for cid in approved]
+    decisions += [(cid, "reject") for cid in rejected]
+    decisions += [(item, "replan") for item in replanned]
+    for raw, action in decisions:
+        record = _apply_decision(store, raw, action)
+        print(
+            json.dumps(
+                {
+                    "status": record["status"],
+                    "confirmation_id": record["confirmation_id"],
+                    "material_id": record["material_id"],
+                    "proposed_date": record.get("proposed_date", record.get("date")),
+                    "proposed_time": record["proposed_time"],
+                    "decided_by": record.get("approved_by") or record.get("rejected_by") or record.get("decided_by"),
+                },
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+
+
+def _apply_decision(store: Store, raw: str, action: str) -> dict[str, Any]:
+    if action == "approve":
+        return store.approve_confirmation(raw)
+    if action == "reject":
+        return store.reject_confirmation(raw)
+    confirmation_id, _, slot = raw.partition("=")
+    if not slot:
+        raise ValueError(f"--replan 需要写成 C-...=19:30 或 C-...=2026-11-12 19:30，收到 {raw}")
+    date: str | None = None
+    time_str = slot.strip()
+    if " " in time_str:
+        date, time_str = time_str.split(None, 1)
+    return store.replan_confirmation(confirmation_id.strip(), time_str.strip(), date=date)
 
 
 def run_once(args: argparse.Namespace) -> dict[str, Any]:
@@ -143,6 +157,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         metavar="CONFIRMATION_ID",
         help="人工否决某个待确认项（可重复）：该改期方案连同它的待确认草稿一起作废；模型没有这个能力",
+    )
+    parser.add_argument(
+        "--replan",
+        action="append",
+        metavar="CONFIRMATION_ID=HH:MM",
+        help="人不同意模型提的时段、自己改选一个（可重复）：写成 C-...=19:30，也可带日期 C-...='2026-11-12 19:30'",
     )
     return parser
 

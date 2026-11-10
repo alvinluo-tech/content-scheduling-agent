@@ -74,6 +74,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                     "hard_time_preserved": True,
                     "requires_user_confirmation": False,
                     "pending_confirmations": [],
+                    "slot_options": [],
                     "draft": None,
                     "published": False,
                     "result_status": "material_not_found",
@@ -86,6 +87,15 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
             c for c in store.confirmations_for(requested_date, material_id, request["requested_time"])
         ]
         date_changed = bool((draft or {}).get("date_changed"))
+        # 工具查过哪些替代时段：人改选时得有据可依，不用自己瞎填时间。
+        last_query = toolbox.last_query.get(material_id, {})
+        slot_options = [
+            {"date": requested_date, "time": item, "kind": "same_day"}
+            for item in (last_query.get("alternatives") or [])
+        ]
+        next_day = last_query.get("next_available")
+        if next_day:
+            slot_options.append({"date": next_day["date"], "time": next_day["time"], "kind": "next_day"})
         status = _material_status(request, review, draft, touched, toolbox.attempts.get(material_id, 0))
         rows.append(
             {
@@ -109,13 +119,14 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                 "pending_confirmations": [
                     {
                         "confirmation_id": c["confirmation_id"],
-                        "question": c["question"],
+                        "question": c.get("question", ""),
                         "proposed_date": c.get("proposed_date", c.get("date")),
                         "proposed_time": c["proposed_time"],
                         "status": c["status"],
                     }
                     for c in confirmations
                 ],
+                "slot_options": slot_options,
                 "draft": None if draft is None else {
                     "draft_id": draft["draft_id"],
                     "scheduled_date": draft["date"],

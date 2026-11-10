@@ -136,6 +136,51 @@ class Store:
         self.commit()
         return record
 
+    def replan_confirmation(
+        self,
+        confirmation_id: str,
+        time_str: str,
+        date: str | None = None,
+        actor: str = "human",
+        note: str = "",
+    ) -> dict[str, Any]:
+        """人工改选：否决模型提的时段，同时把自己选的那个时段记为 approved。
+
+        否决与否决是同一件事——模型那版方案作废；区别只在于人给了新的落点，
+        所以额外登记一条 approved 记录，模型重跑时 save_draft 才能落到 draft_ready。
+        """
+        record = self.confirmations.get(confirmation_id)
+        if record is None:
+            raise ValueError(f"没有待确认项 {confirmation_id}")
+        self.reject_confirmation(confirmation_id, actor, note or "用户改选了其它时段")
+        record = self.confirmations[confirmation_id]
+        counter_date = date or record.get("proposed_date") or record.get("date")
+        counter_id = f"C-{record['material_id']}-{counter_date}-{time_str.replace(':', '')}"
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+        counter = self.confirmations.get(counter_id)
+        if counter is None:
+            counter = {
+                "confirmation_id": counter_id,
+                "date": counter_date,
+                "requested_date": record.get("requested_date", record.get("date")),
+                "material_id": record["material_id"],
+                "requested_time": record["requested_time"],
+                "proposed_date": counter_date,
+                "proposed_time": time_str,
+                "question": f"用户改选为 {counter_date} {time_str}",
+            }
+            self.confirmations[counter_id] = counter
+        counter.update(
+            {
+                "status": "approved",
+                "decided_by": actor,
+                "decided_at": stamp,
+                "replanned_from": confirmation_id,
+            }
+        )
+        self.commit()
+        return counter
+
     def confirmations_for(self, requested_date: str, material_id: str, requested_time: str) -> list[dict[str, Any]]:
         """按“用户原本要求的那一天 + 那个时间”找确认项；提议日期在 proposed_date 上。"""
         return [
