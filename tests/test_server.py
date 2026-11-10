@@ -132,6 +132,31 @@ class ServerTestCase(unittest.TestCase):
             for material in body["report"]["materials"]:
                 self.assertFalse(material.get("published", False), case)
 
+    def test_human_approval_turns_pending_draft_into_ready(self) -> None:
+        status, body = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
+        self.assertEqual(status, 200)
+        material = body["report"]["materials"][0]
+        self.assertEqual(body["report"]["outcome"], "pending_confirmation")
+        confirmation_id = material["pending_confirmations"][0]["confirmation_id"]
+
+        status, confirmed = self.post("/api/confirm", {"confirmation_id": confirmation_id})
+        self.assertEqual(status, 200)
+        self.assertEqual(confirmed["confirmation"]["status"], "approved")
+
+        status, again = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": False})
+        self.assertEqual(status, 200)
+        report = again["report"]
+        after = report["materials"][0]
+        self.assertEqual(report["outcome"], "scheduled")
+        self.assertFalse(after["requires_user_confirmation"])
+        self.assertEqual(after["draft"]["status"], "draft_ready")
+        self.assertFalse(report["published"])
+
+    def test_unknown_confirmation_is_rejected(self) -> None:
+        status, body = self.post("/api/confirm", {"confirmation_id": "C-NOPE"})
+        self.assertEqual(status, 400)
+        self.assertIn("没有待确认项", body["error"])
+
 
 if __name__ == "__main__":
     unittest.main()

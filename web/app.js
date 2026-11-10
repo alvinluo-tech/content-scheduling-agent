@@ -306,6 +306,12 @@
         var conf = el("li");
         conf.appendChild(el("span", "mono", text(item.confirmation_id) + " · " + text(item.status)));
         conf.appendChild(el("div", null, text(item.question)));
+        if (item.status === "pending") {
+          var approve = el("button", "confirm-btn", "记为用户已确认");
+          approve.type = "button";
+          approve.addEventListener("click", function () { approveConfirmation(item.confirmation_id, approve); });
+          conf.appendChild(approve);
+        }
         list.appendChild(conf);
       });
       right.appendChild(kv("待确认", list));
@@ -434,6 +440,27 @@
       showError(err.message || String(err));
     }).then(function () {
       setRunning(false);
+    });
+  }
+
+  /* 人工确认走 /api/confirm：模型工具集里没有这个动作，只有人点这一下才算同意。 */
+  function approveConfirmation(confirmationId, btn) {
+    if (running) { return; }
+    btn.disabled = true;
+    btn.textContent = "记录中…";
+    fetchJSON("/api/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation_id: confirmationId })
+    }).then(function (payload) {
+      state = payload.state || state;
+      renderMeta(state);
+      $("reset-ledger").checked = false;  // 别把刚写下的确认清掉
+      return run();
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = "记为用户已确认";
+      showError(err.message || String(err));
     });
   }
 

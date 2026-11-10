@@ -25,7 +25,7 @@
 
 ## 如果还有时间（下一步）
 1. ~~接真实 DeepSeek 跑 02/04 两条路径，把真实 trace 与 Mock 差异写进 03~~ ✅ 已完成，见 `docs/03-evaluation.md` 真实模型一节与 `examples/*.live.*`。
-2. 增加"确认回写"入口：人把 pending 改成 approved 后重跑，直接产出 `draft_ready`。
+2. ~~增加"确认回写"入口~~ ✅ 已做：`--approve` / `POST /api/confirm`，只有人能点，重跑直接产出 `draft_ready`。
 3. 排期从"不冲突"升级到"可解释的优先级排序"（频道负载、素材时效、时长组合）。
 4. ~~把 CLI 包一层薄 HTTP API~~ 部分完成：已加 Web 演示层（`src/server.py` + `web/`，同一张图、`.runtime` 独立账本），生产 API 还缺鉴权与并发控制。
 5. 补多日/多频道占位与并发保存（当前单文件账本，多进程同时写会丢更新）。

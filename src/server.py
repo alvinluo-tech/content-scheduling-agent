@@ -16,6 +16,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from .main import load_env, run_pipeline
+from .store import Store
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WEB_ROOT = REPO_ROOT / "web"
@@ -182,6 +183,16 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/reset":
             LEDGER_PATH.unlink(missing_ok=True)
             self._json(200, {"status": "ok", "state": snapshot()})
+            return
+        if path == "/api/confirm":
+            with RUN_LOCK:
+                try:
+                    store = Store(DATA_DIR, LEDGER_PATH)
+                    record = store.approve_confirmation(str(body.get("confirmation_id") or ""))
+                except ValueError as exc:
+                    self._json(400, {"status": "error", "error": str(exc)})
+                    return
+                self._json(200, {"status": "ok", "confirmation": record, "state": snapshot()})
             return
         if path == "/api/run":
             with RUN_LOCK:

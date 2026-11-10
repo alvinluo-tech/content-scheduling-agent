@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +90,19 @@ class Store:
 
     def add_confirmation(self, record: dict[str, Any]) -> dict[str, Any]:
         self.confirmations[record["confirmation_id"]] = record
+        self.commit()
+        return record
+
+    def approve_confirmation(self, confirmation_id: str, actor: str = "human") -> dict[str, Any]:
+        """人工确认通道：只有人能调用，模型工具集里没有这个动作。"""
+        record = self.confirmations.get(confirmation_id)
+        if record is None:
+            raise ValueError(f"没有待确认项 {confirmation_id}")
+        if record.get("status") == "approved":
+            return record
+        record["status"] = "approved"
+        record["approved_by"] = actor
+        record["approved_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         self.commit()
         return record
 

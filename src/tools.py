@@ -275,11 +275,13 @@ class Toolbox:
             return _err("BAD_TIME", f"{scheduled_time} 不在营业时段或网格上", hint=f"{hours['start']}-{hours['end']}，{hours['granularity_min']} 分钟粒度")
         requested_time = request["requested_time"]
         time_changed = scheduled_time != requested_time
-        pending = [
+        # pending 与 approved 都算"用户已看到这个改动"；只有 pending 才需要继续等用户拍板。
+        approvals = [
             c for c in self.store.confirmations_for(self.date, material_id, requested_time)
-            if c["proposed_time"] == scheduled_time and c["status"] == "pending"
+            if c["proposed_time"] == scheduled_time and c["status"] in ("pending", "approved")
         ]
-        if time_changed and request.get("time_hard") and not pending:
+        awaiting_user = any(c["status"] == "pending" for c in approvals)
+        if time_changed and request.get("time_hard") and not approvals:
             return _err(
                 "HARD_CONSTRAINT_VIOLATION",
                 f"发布时间 {requested_time} 是用户硬性要求，改到 {scheduled_time} 必须先获得用户确认",
@@ -308,7 +310,7 @@ class Toolbox:
             "requested_time": requested_time,
             "scheduled_time": scheduled_time,
             "time_changed": time_changed,
-            "status": "draft_pending_confirmation" if (time_changed and request.get("time_hard")) else "draft_ready",
+            "status": "draft_pending_confirmation" if (time_changed and request.get("time_hard") and awaiting_user) else "draft_ready",
             "reason": reason,
             "submit_count": 1,
             "updated_at": self.clock(),
@@ -325,5 +327,9 @@ class Toolbox:
             "status": stored["status"],
             "deduplicated": not created,
             "published": False,
-            "note": "仅保存草稿，未发布；待确认项仍需用户拍板",
+            "note": (
+                "仅保存草稿，未发布；用户已确认替代时段，草稿可直接使用"
+                if stored["status"] == "draft_ready"
+                else "仅保存草稿，未发布；待确认项仍需用户拍板"
+            ),
         }

@@ -37,6 +37,14 @@ cp .env.example .env         # 填入 DEEPSEEK_API_KEY=sk-...
 
 不加 `--offline` 时走真实模型；缺少密钥会直接报错并提示改用 `--offline`，不会静默降级成假结果。
 
+硬性时间被占用时，Agent 只能登记待确认项；确认由人来给（模型没有审批工具）：
+
+```bash
+# 02 跑完会打印/写出 C-M01-2026-11-12-1900；人点头后重跑，草稿才变成 draft_ready
+.venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline \
+  --approve C-M01-2026-11-12-1900
+```
+
 模型 id 不是猜的：`LLM_MODEL` 的值取自 `curl https://api.deepseek.com/models`（Bearer 密钥）实测返回的
 `deepseek-v4-pro` 与 `deepseek-flash`。想换模型改这一行即可，写错名字会在第一次请求时直接报错，不会悄悄换模型。
 

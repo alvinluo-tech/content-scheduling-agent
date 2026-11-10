@@ -50,6 +50,7 @@
 | `docs/images/web-04-save-failure.png` | 保存失败 | 结论「存在失败项」；M05「保存失败」、草稿「未保存（失败 2 次）」；trace 末两步 `FAIL` |
 | `docs/images/web-06-step-limit.png` | 步数上限 | 结论「步数上限中断」；`步数 3/3`；M02「未完成」、M05「未处理」，模型自述写明未收尾 |
 | `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
+| `docs/images/web-02-conflict-approved.png` | 人工确认后重跑 | 点「记为用户已确认」后确认项变 `approved`、结论变「已排期 · 仅草稿」、`requires_user_confirmation=false`、`published` 仍为 false |
 
 ## 失败与限制
 
@@ -59,8 +60,8 @@
    真实内容审核还需要语义模型或人工。
 3. **排期不是最优化**：只保证不冲突 + 尊重用户要求，不做频道/流量/时长组合优化。
 4. **单日单频道**：`schedule.json` 固定一天一个频道；跨天/多频道需要扩展 `Store.occupied_slots`。
-5. **确认无回写通道**：`request_confirmation` 只登记待确认，本版本没有"人确认后再次运行"的入口，
-   真实产品需要一个确认界面把状态改成 approved 再触发保存。
+5. ~~确认无回写通道~~ 已补：人可通过 `--approve C-...` 或 `POST /api/confirm` 把 pending 改成 approved，
+   重跑即落 `draft_ready`（接口测试 `test_human_approval_turns_pending_draft_into_ready`）。仍是单人本地演示，没有账号与审批留痕。
 6. **步数上限是硬截断**：达到上限的素材保持 `unresolved`/`not_processed`，不做部分保存的补偿逻辑。
 
 ## 真实模型（DeepSeek）验证

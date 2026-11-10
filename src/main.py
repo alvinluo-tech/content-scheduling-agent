@@ -64,8 +64,32 @@ def run_pipeline(
     return report, trace.as_dict(limits)
 
 
+def apply_approvals(args: argparse.Namespace) -> None:
+    """人工确认通道（模型没有这个工具）：把待确认项标记为 approved 后，下一轮才能直接落草稿。"""
+    ids = getattr(args, "approve", None) or []
+    if not ids:
+        return
+    store = Store(args.data_dir, args.ledger)
+    for confirmation_id in ids:
+        record = store.approve_confirmation(confirmation_id)
+        print(
+            json.dumps(
+                {
+                    "status": "approved",
+                    "confirmation_id": record["confirmation_id"],
+                    "material_id": record["material_id"],
+                    "proposed_time": record["proposed_time"],
+                    "approved_by": record.get("approved_by"),
+                },
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+
+
 def run_once(args: argparse.Namespace) -> dict[str, Any]:
     run: dict[str, Any] = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    apply_approvals(args)
     report, trace_dict = run_pipeline(
         run,
         data_dir=args.data_dir,
@@ -91,6 +115,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--trace", default=None, help="把执行轨迹写入该路径")
     parser.add_argument("--max-steps", type=int, default=None, help="模型-工具往返次数上限，达到即返回未完成状态")
     parser.add_argument("--offline", action="store_true", help="离线 Mock 模式：只验证流程，不代表真实模型决策")
+    parser.add_argument(
+        "--approve",
+        action="append",
+        metavar="CONFIRMATION_ID",
+        help="人工确认某个待确认项（可重复），随后再跑一次即可落成 draft_ready；模型没有这个能力",
+    )
     return parser
 
 
@@ -102,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError as exc:
         print(json.dumps({"status": "error", "error": f"输入文件不存在：{exc}"}, ensure_ascii=False), file=sys.stderr)
         return 2
-    except (RuntimeError, json.JSONDecodeError) as exc:
+    except (RuntimeError, ValueError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2
     print(json.dumps(report, ensure_ascii=False, indent=2))
