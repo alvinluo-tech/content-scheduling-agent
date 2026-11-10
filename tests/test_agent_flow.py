@@ -126,6 +126,17 @@ class AgentFlowTest(unittest.TestCase):
             ["read_material", "check_rules", "query_time_slot", "request_confirmation", "save_draft"],
         )
 
+    def test_missing_api_key_fails_loudly(self) -> None:
+        """没有密钥必须直接报错并提示 --offline，不能静默降级成假结果。"""
+        from unittest import mock
+
+        from src.models import build_chat_model
+
+        with mock.patch.dict("os.environ", {"DEEPSEEK_API_KEY": "", "OPENAI_API_KEY": ""}, clear=False):
+            with self.assertRaises(RuntimeError) as ctx:
+                build_chat_model("deepseek", {"run_id": "x"})
+        self.assertIn("--offline", str(ctx.exception))
+
     def test_no_publish_tool_exists(self) -> None:
         names = {spec["function"]["name"] for spec in TOOL_SPECS}
         self.assertEqual(

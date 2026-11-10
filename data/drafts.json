@@ -1,4 +1,30 @@
 {
-  "drafts": {},
-  "confirmations": {}
+  "drafts": {
+    "2026-11-12|M01|18:00": {
+      "draft_id": "D-M01-2026-11-12-1800",
+      "date": "2026-11-12",
+      "material_id": "M01",
+      "requested_time": "18:00",
+      "scheduled_time": "19:00",
+      "time_changed": true,
+      "status": "draft_pending_confirmation",
+      "reason": "18:00 冲突，改用替代时段 19:00 保存草稿",
+      "submit_count": 1,
+      "updated_at": "2026-11-12T09:20:00+08:00",
+      "published": false
+    }
+  },
+  "confirmations": {
+    "C-M01-2026-11-12-1900": {
+      "confirmation_id": "C-M01-2026-11-12-1900",
+      "date": "2026-11-12",
+      "material_id": "M01",
+      "requested_time": "18:00",
+      "proposed_time": "19:00",
+      "question": "18:00 是硬性要求但已被占用，是否同意改到 19:00？",
+      "reason": "冲突 + 硬性要求，不能擅自改时间，先登记待确认项",
+      "status": "pending",
+      "created_at": "2026-11-12T09:20:00+08:00"
+    }
+  }
 }
