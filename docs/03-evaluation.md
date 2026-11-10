@@ -13,10 +13,10 @@
 | --- | --- | --- |
 | 规则层 | `tests/test_policy.py` | R01-R05 的四种审核结论、时段网格、冲突与替代时段 |
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具 |
-| 图级 | `tests/test_agent_flow.py` | 6 个用例端到端、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
-| 接口层 | `tests/test_server.py` | `/api/state` 字段、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False |
+| 图级 | `tests/test_agent_flow.py` | 7 个用例端到端、多日冲突只在自己那一天待确认、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
+| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days` 两天占位）、7 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序与人工确认回写 |
 
-## 六个用例的实际结果（离线 Mock）
+## 七个用例的实际结果（离线 Mock）
 
 | 用例 | status | outcome | steps / tools | 关键观察 |
 | --- | --- | --- | --- | --- |
@@ -26,8 +26,14 @@
 | 03-rules-and-missing | completed | failed | 6 / 5 | M03 `needs_info`（缺 duration_sec、authorized 未知，R01/R02）；M04 `blocked`（R03 违禁词 + R05 人工复核）；两者都没草稿 |
 | 04-save-failure | completed | failed | 6 / 5 | 保存返回 SAVE_FAILED → 重试一次仍失败 → 停止；`result_status=save_failed`，无草稿，不谎报成功 |
 | 06-step-limit | step_limit_reached | incomplete | 3 / 3 | 上限 3 步：M02 停在查询后未保存、M05 未处理；`completed=false`、`unfinished_materials=[M02, M05]` |
+| 07-multiday | completed | pending_confirmation | 10 / 9 | 两条请求都排 11-13：M06 的 09:00 被 M07 占 → 提议 09:30 并待确认（`scheduled_date=2026-11-13`、`date_changed=false`）；M07 的 20:00 空闲 → `draft_ready`；两条 `published=false` |
 
 每条都可在 `examples/<case>.output.json`（结果）与 `examples/<case>.trace.json`（分步动作/参数/观察/下一步）对照。
+
+多日的三条口径：① 占位按天算（`data/schedule.json` 的 `days`），09:00 在 11-13 被占不等于 11-12 也被占；
+② 请求不带 `requested_date` 就用默认日期，所以旧的 6 个用例 trace 逐字节未变；
+③ 去重键跟「用户要求」走（`requested_date|material_id|requested_time`）——换替代时段重提命中同一份草稿，改日期则是一条新排期；
+时间或日期任一被改动且 `time_hard=true`，都必须先有确认记录才能保存。
 
 ## 与题面参考实例的逐条对齐
 
@@ -44,7 +50,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-七张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+八张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -55,6 +61,7 @@
 | `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
 | `docs/images/web-02-conflict-approved.png` | 人工确认后重跑 | 点「记为用户已确认」后确认项变 `approved`、结论变「已排期 · 仅草稿」、`requires_user_confirmation=false`、`published` 仍为 false |
 | `docs/images/web-02-conflict-streaming.png` | 真实模型运行中（第 3 条决策） | 右栏逐条推送（`执行中 · 已产生 3 条决策记录`，朱红呼吸点），中间上一轮结论压暗；跑完后恢复亮度并换成新结果 |
+| `docs/images/web-07-multiday.png` | 多日排期 | 页面顶部「2026-11-12 起 2 天」；时段带上方出现两天切换（11-13 激活）；11-13 明细列出 09:00 M07 / 09:30 草稿 M06 / 14:00 M06 / 20:00 草稿 M07；结论「待用户确认」、`已发布 false` |
 
 ## 失败与限制
 
@@ -63,7 +70,7 @@
 2. **规则是合成规则**：R01-R05 只覆盖题面点名的四类风险（缺字段、未授权、违禁词、敏感品类），
    真实内容审核还需要语义模型或人工。
 3. **排期不是最优化**：只保证不冲突 + 尊重用户要求，不做频道/流量/时长组合优化。
-4. **单日单频道**：`schedule.json` 固定一天一个频道；跨天/多频道需要扩展 `Store.occupied_slots`。
+4. **单频道**：多日已支持（`schedule.json` 的 `days`），但仍只有 `channel=main` 一个频道维度；真正的多渠道排期需要把频道加进占位键与工具入参。
 5. ~~确认无回写通道~~ 已补：人可通过 `--approve C-...` 或 `POST /api/confirm` 把 pending 改成 approved，
    重跑即落 `draft_ready`（接口测试 `test_human_approval_turns_pending_draft_into_ready`）。仍是单人本地演示，没有账号与审批留痕。
 6. **步数上限是硬截断**：达到上限的素材保持 `unresolved`/`not_processed`，不做部分保存的补偿逻辑。

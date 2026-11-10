@@ -28,9 +28,9 @@
 | --- | --- | --- |
 | `read_material` | 读元数据，返回缺失的必填字段 | 素材必须在本次请求范围内（`NO_REQUEST`）；不存在 → `MATERIAL_NOT_FOUND` |
 | `check_rules` | 按 R01-R05 审核 | 返回 `review_status`（pass / pass_with_warnings / missing_info / risk）与 `can_draft` |
-| `query_time_slot` | 查某时段是否可排 + 后续 3 个可用时段 | 不在营业时段/网格 → `BAD_TIME`；草稿同样占位（但自己的草稿不算冲突） |
+| `query_time_slot` | 查某天某时段是否可排 + 后续 3 个可用时段（`date` 可选，缺省用该素材的 `requested_date`） | 不在营业时段/网格 → `BAD_TIME`；日期不在 `schedule.json` 的 `days` 里 → `DATE_NOT_AVAILABLE`（不可恢复）；占用按天算，草稿同样占位（但自己的草稿不算冲突） |
 | `request_confirmation` | 把"需要人拍板"变成一条可追踪的记录 | 幂等：同一 `(素材, 请求时段, 建议时段)` 只登记一条 |
-| `save_draft` | 写草稿账本 | ① 硬性时间改期未确认 → `HARD_CONSTRAINT_VIOLATION`；② `can_draft=false` → `MATERIAL_NOT_READY`；③ 时段被占 → `SLOT_CONFLICT`；④ 注入失败 → `SAVE_FAILED`；⑤ 重复提交 → 同 `draft_id`，`deduplicated=true` |
+| `save_draft` | 写草稿账本（`date` 可选） | ① 硬性时间的时间或日期被改动且未确认 → `HARD_CONSTRAINT_VIOLATION`；② `can_draft=false` → `MATERIAL_NOT_READY`；③ 时段被占 → `SLOT_CONFLICT`；④ 注入失败 → `SAVE_FAILED`；⑤ 重复提交 → 同 `draft_id`，`deduplicated=true` |
 
 每个工具强制要求 `reason` 参数，因此"模型的决策依据"天然出现在 trace 里，而不是靠事后猜。
 
@@ -40,7 +40,7 @@
 
 ## 三条不可越界的红线（代码强制，不靠提示词）
 1. **不发布**：工具集里没有发布工具，`build_report` 里 `published` 是常量 `False`。
-2. **硬性时间需确认**：`time_hard=true` 且 `scheduled_time != requested_time` 时，若没有 pending/approved 的确认记录，直接拒绝保存。
+2. **硬性时间需确认**：`time_hard=true` 且时间或日期变了（`time_changed or date_changed`）时，若没有 pending/approved 的确认记录，直接拒绝保存。
    确认只能由**人**给出：`--approve C-...`（CLI）或 `POST /api/confirm`（Web），模型工具集里没有审批动作；
    `approved` 之后重跑才会落到 `draft_ready`，没点头之前那份草稿始终是 `draft_pending_confirmation`。
 3. **审核未过不许排**：`can_draft=false`（缺信息或命中阻断规则）时 `save_draft` 一律 `MATERIAL_NOT_READY`。
@@ -77,5 +77,5 @@
 | 交互形态 | CLI | 评审可复现、无端口/环境依赖；HTTP 与 Notebook 都会引入与考核目标无关的复杂度 |
 | 框架 | LangGraph（显式图） | 用户指定；显式节点/边保留对循环与上限的控制权 |
 | 账本 | JSON 文件 + 原子写 | 3 小时范围内不引入数据库；原子替换保证不会写坏 |
-| 去重键 | `date|material_id|requested_time` | 同一素材同一原始请求重复提交应落回同一份草稿；换请求时段视为新排期 |
+| 去重键 | `(requested_date, material_id, requested_time)` | 同一素材同一原始请求重复提交应落回同一份草稿；换请求时段视为新排期 |
 | 为确认单独建工具 | 是 | 让"请求确认"可观测、可校验顺序 |
