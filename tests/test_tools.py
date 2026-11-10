@@ -158,7 +158,7 @@ class MultiDayToolboxTest(unittest.TestCase):
         )
         self.assertEqual(day13["date"], "2026-11-13")
         self.assertFalse(day13["available"])
-        self.assertEqual([c["material_id"] for c in day13["conflicts"]], ["M07"])
+        self.assertEqual([c["material_id"] for c in day13["conflicts"]], ["M02"])
         self.assertTrue(day12["available"])
 
     def test_unknown_date_is_rejected(self) -> None:

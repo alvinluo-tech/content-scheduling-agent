@@ -1,0 +1,169 @@
+{
+  "run_id": "case07-multiday",
+  "mode": "deepseek",
+  "model": "deepseek-v4-pro",
+  "terminal": "completed",
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 8,
+    "tool_calls": 9
+  },
+  "steps": [
+    {
+      "step": 1,
+      "rationale": "处理第一条排期请求 M06，先读取素材元数据，确认标题、时长、授权状态等信息是否存在。",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M06",
+          "reason": "处理第一条排期请求 M06，先读取素材元数据，确认标题、时长、授权状态等信息是否存在。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M06 标题《城市通勤 45 秒预告》，必填字段齐全"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 1,
+      "rationale": "对 M06 做规则审核，确认是否通过、能否保存草稿。",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M06",
+          "reason": "对 M06 做规则审核，确认是否通过、能否保存草稿。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 pass，命中规则 无"
+      },
+      "next_action": "调用 query_time_slot"
+    },
+    {
+      "step": 2,
+      "rationale": "用户硬性要求 M06 在 2026-11-13 09:00 发布，先查询该时段是否空闲、是否被占用。",
+      "action": {
+        "tool": "query_time_slot",
+        "args": {
+          "material_id": "M06",
+          "time": "09:00",
+          "date": "2026-11-13",
+          "reason": "用户硬性要求 M06 在 2026-11-13 09:00 发布，先查询该时段是否空闲、是否被占用。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "09:00 被 ['M02'] 占用，可用替代 ['09:30', '10:00', '10:30']"
+      },
+      "next_action": "调用 request_confirmation"
+    },
+    {
+      "step": 3,
+      "rationale": "M06 硬性要求 09:00，但该时段被 M02 占用；最近可用替代时段为 09:30，需先登记待用户确认再保存草稿。",
+      "action": {
+        "tool": "request_confirmation",
+        "args": {
+          "material_id": "M06",
+          "proposed_time": "09:30",
+          "date": "2026-11-13",
+          "question": "09:00 已被 M02 占用，是否同意将 M06 改到 09:30 发布？",
+          "reason": "M06 硬性要求 09:00，但该时段被 M02 占用；最近可用替代时段为 09:30，需先登记待用户确认再保存草稿。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "待确认 C-M06-2026-11-13-0930 已登记（pending）"
+      },
+      "next_action": "调用 save_draft"
+    },
+    {
+      "step": 4,
+      "rationale": "已就 09:00→09:30 的改动登记待确认项 C-M06-2026-11-13-0930，现按建议时段保存草稿（草稿占位，未发布）。",
+      "action": {
+        "tool": "save_draft",
+        "args": {
+          "material_id": "M06",
+          "scheduled_time": "09:30",
+          "date": "2026-11-13",
+          "reason": "已就 09:00→09:30 的改动登记待确认项 C-M06-2026-11-13-0930，现按建议时段保存草稿（草稿占位，未发布）。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "草稿 D-M06-2026-11-13-0900 draft_pending_confirmation，published=False"
+      },
+      "next_action": "调用 read_material"
+    },
+    {
+      "step": 5,
+      "rationale": "处理第二条排期请求 M07，先读取素材元数据，确认标题、时长、授权状态等信息是否完整。",
+      "action": {
+        "tool": "read_material",
+        "args": {
+          "material_id": "M07",
+          "reason": "处理第二条排期请求 M07，先读取素材元数据，确认标题、时长、授权状态等信息是否完整。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "M07 标题《双十一战报速递》，必填字段齐全"
+      },
+      "next_action": "调用 check_rules"
+    },
+    {
+      "step": 5,
+      "rationale": "对 M07 做规则审核，确认是否通过、能否保存草稿。",
+      "action": {
+        "tool": "check_rules",
+        "args": {
+          "material_id": "M07",
+          "reason": "对 M07 做规则审核，确认是否通过、能否保存草稿。"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "审核 pass，命中规则 无"
+      },
+      "next_action": "调用 query_time_slot"
+    },
+    {
+      "step": 6,
+      "rationale": "用户硬性要求 M07 在 2026-11-13 20:00 发布，先查询该时段是否空闲、是否被占用。",
+      "action": {
+        "tool": "query_time_slot",
+        "args": {
+          "date": "2026-11-13",
+          "material_id": "M07",
+          "reason": "用户硬性要求 M07 在 2026-11-13 20:00 发布，先查询该时段是否空闲、是否被占用。",
+          "time": "20:00"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "20:00 可用，后续可用时段 ['20:30']"
+      },
+      "next_action": "调用 save_draft"
+    },
+    {
+      "step": 7,
+      "rationale": "M07 审核通过，20:00 时段空闲且符合硬性要求，直接保存草稿（未发布）。",
+      "action": {
+        "tool": "save_draft",
+        "args": {
+          "date": "2026-11-13",
+          "material_id": "M07",
+          "reason": "M07 审核通过，20:00 时段空闲且符合硬性要求，直接保存草稿（未发布）。",
+          "scheduled_time": "20:00"
+        }
+      },
+      "observation": {
+        "ok": true,
+        "summary": "草稿 D-M07-2026-11-13-2000 draft_ready，published=False"
+      },
+      "next_action": "结束并输出排期结果"
+    }
+  ],
+  "final_message": "两条排期请求已全部处理完毕，全程只保存草稿，未发布任何内容。总结如下：\n\n**M06（城市通勤 45 秒预告）**\n- 素材元数据完整，审核通过（can_draft=true）。\n- 但硬性要求的 2026-11-13 09:00 已被 M02 占用，无法排入。\n- 因该时间为 hard=true，未擅自改期；已登记待确认项 `C-M06-2026-11-13-0930`，建议改到最近可用时段 **09:30**。\n- 草稿已暂存至 09:30，状态为「待用户确认」（draft_pending_confirmation），published=false。\n- ⚠️ 需要你拍板：是否接受 M06 从 09:00 改到 09:30？确认前不得视为已排期/已确认。\n\n**M07（双十一战报速递）**\n- 素材元数据完整，审核通过（can_draft=true）。\n- 2026-11-13 20:00 时段空闲，符合硬性要求，已按 20:00 保存草稿（draft_ready），published=false，无需改动。\n\n**待用户拍板事项**\n- 仅 M06 一项：09:00 被 M02 占用，是否同意改到 09:30？如你另有倾向时段（如 10:00、10:30 等可用时段），也可以告诉我重新调整。"
+}

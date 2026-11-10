@@ -3,7 +3,7 @@ test_duplicate_submission_creates_one_draft (tests.test_agent_flow.AgentFlowTest
 test_missing_api_key_fails_loudly (tests.test_agent_flow.AgentFlowTest.test_missing_api_key_fails_loudly)
 没有密钥必须直接报错并提示 --offline，不能静默降级成假结果。 ... ok
 test_multi_day_conflict_stays_pending_on_its_own_day (tests.test_agent_flow.AgentFlowTest.test_multi_day_conflict_stays_pending_on_its_own_day)
-11-13 09:00 被 M07 占用：改到 09:30 只能待确认；另一条素材在 11-13 空白时段直接落草稿。 ... ok
+11-13 09:00 被 M02 占用：改到 09:30 只能待确认；另一条素材在 11-13 空白时段直接落草稿。 ... ok
 test_no_publish_tool_exists (tests.test_agent_flow.AgentFlowTest.test_no_publish_tool_exists) ... ok
 test_normal_schedule (tests.test_agent_flow.AgentFlowTest.test_normal_schedule) ... ok
 test_reference_instance_conflict (tests.test_agent_flow.AgentFlowTest.test_reference_instance_conflict)
@@ -58,6 +58,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 55 tests in 6.380s
+Ran 55 tests in 6.545s
 
 OK

@@ -90,7 +90,7 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 | 规则风险 | 同上 | M04 `blocked`，`risk_reasons` 命中 R03 |
 | 保存失败 | `examples/04-save-failure.*` | `result_status=save_failed`，无草稿，不谎报成功 |
 | 步数上限 | `examples/06-step-limit.*` | `status=step_limit_reached`、`completed=false`、列出未完成素材 |
-| 多日排期 | `examples/07-multiday.*` | M06 在 11-13 09:00 被占 → `scheduled_date=2026-11-13`、`suggested_time=09:30`、待确认；M07 同一天 20:00 直接落草稿；`published=false` |
+| 多日排期 | `examples/07-multiday.*` | M06 在 11-13 09:00 被 M02 占 → `scheduled_date=2026-11-13`、`suggested_time=09:30`、待确认；M07 同一天 20:00 直接落草稿；`published=false` |
 
 每个 `.output.json` 是实际输出，`.trace.json` 是同一次运行的分步记录（动作 / 参数 / 观察摘要 / 下一步与决策依据）。
 

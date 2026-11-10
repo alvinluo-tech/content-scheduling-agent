@@ -27,7 +27,7 @@
 | 03-rules-and-missing | completed | failed | 6 / 5 | M03 `needs_info`（缺 duration_sec、authorized 未知，R01/R02）；M04 `blocked`（R03 违禁词 + R05 人工复核）；两者都没草稿 |
 | 04-save-failure | completed | failed | 6 / 5 | 保存返回 SAVE_FAILED → 重试一次仍失败 → 停止；`result_status=save_failed`，无草稿，不谎报成功 |
 | 06-step-limit | step_limit_reached | incomplete | 3 / 3 | 上限 3 步：M02 停在查询后未保存、M05 未处理；`completed=false`、`unfinished_materials=[M02, M05]` |
-| 07-multiday | completed | pending_confirmation | 10 / 9 | 两条请求都排 11-13：M06 的 09:00 被 M07 占 → 提议 09:30 并待确认（`scheduled_date=2026-11-13`、`date_changed=false`）；M07 的 20:00 空闲 → `draft_ready`；两条 `published=false` |
+| 07-multiday | completed | pending_confirmation | 10 / 9 | 两条请求都排 11-13：M06 的 09:00 被 M02 占 → 提议 09:30 并待确认（`scheduled_date=2026-11-13`、`date_changed=false`）；M07 的 20:00 空闲 → `draft_ready`；两条 `published=false` |
 
 每条都可在 `examples/<case>.output.json`（结果）、`examples/<case>.trace.json`（分步动作/参数/观察/下一步）
 与 `examples/<case>.report.md`（同一份结果的 Markdown 版）对照。
@@ -86,17 +86,22 @@
 ```bash
 .venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --out examples/02-conflict.live.output.json --trace examples/02-conflict.live.trace.json
 .venv/Scripts/python.exe -m src.main --input examples/04-save-failure.input.json --out examples/04-save-failure.live.output.json --trace examples/04-save-failure.live.trace.json
+.venv/Scripts/python.exe -m src.main --input examples/07-multiday.input.json --out examples/07-multiday.live.output.json --trace examples/07-multiday.live.trace.json
 ```
 
 | 用例 | 真实模型的实际动作（按 trace 顺序） | 结果 | 与离线 Mock 的差异 |
 | --- | --- | --- | --- |
 | 02-conflict | 第 1 轮并行 `read_material` + `check_rules` → 第 2 轮 `query_time_slot`(18:00) 看到被 M00 占用 → 第 3 轮 `request_confirmation`(C-M01-2026-11-12-1900) → 第 4 轮 `save_draft`(19:00) | completed / pending_confirmation，5 次工具调用 / 5 轮；`draft_pending_confirmation`、`published=false` | Mock 串行 6 轮；真实模型把两个无依赖的读取并行发出，少一轮，决策顺序与结论一致 |
 | 04-save-failure | 第 1 轮并行 `read_material` + `check_rules` + `query_time_slot`(15:00) → 第 2 轮 `save_draft` 收 `SAVE_FAILED` → 第 3 轮重试一次仍失败 → 收尾 | completed / failed，5 次工具调用 / 4 轮；`failed_save_attempts=2`、无草稿 | Mock 串行 5 轮；结论相同（重试一次后如实放弃） |
+| 07-multiday | 并行读两条素材 → 分别 `query_time_slot`(11-13 09:00 / 20:00) → 对 09:00 的冲突 `request_confirmation`(C-M06-2026-11-13-0930) → 两条 `save_draft`(09:30 待确认 / 20:00 直接存) | completed / pending_confirmation，9 次工具调用 / 8 轮；M06 `scheduled_date=2026-11-13`、09:30、`draft_pending_confirmation`；M07 20:00 `draft_ready`；`published=false` | Mock 10 轮；真实模型同样按天归因、只对冲突那条请求确认，另一条不打扰用户 |
 
 这次真实运行验证到的三件事：
 
 1. **「先确认、再改硬性时间」不是提示词祈使句**：模型确实先调 `request_confirmation` 再 `save_draft`，且 `save_draft` 的硬性时间护栏没有触发 `HARD_CONSTRAINT_VIOLATION`——护栏与模型行为互为验证。
 2. **没有谎报**：`agent_summary` 明确写「M05 的排期草稿目前未保存成功」「未发布」，与 `published=false`、`draft=null` 一致。
 3. **并行工具调用会改写「步」的口径**：模型在同一轮里并行发出无依赖的调用，于是 `limits.steps_used`（模型轮次）小于 trace 条目数。trace 的 `step` 现在按模型轮次编号（同轮共享步号），报告与 trace 口径一致。
+
+4. **多日同样成立**：07 的真实 trace 里，模型对 11-13 的两条请求分别按天查询占位，
+   只对"硬性时间被占"的那条登记确认、另一条直接落草稿——没有把两条请求的时间口径串在一起。
 
 边界：每条路径只跑一次，样本量不足以证明稳定的决策质量；真实模型 trace 不进 CI（依赖外部 API 与配额）。

@@ -55,7 +55,7 @@
       },
       "observation": {
         "ok": true,
-        "summary": "09:00 被 ['M07'] 占用，可用替代 ['09:30', '10:00', '10:30']"
+        "summary": "09:00 被 ['M02'] 占用，可用替代 ['09:30', '10:00', '10:30']"
       },
       "next_action": "调用 request_confirmation"
     },

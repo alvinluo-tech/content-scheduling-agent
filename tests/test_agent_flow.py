@@ -94,7 +94,7 @@ class AgentFlowTest(unittest.TestCase):
         self.assertFalse(row["published"])
 
     def test_multi_day_conflict_stays_pending_on_its_own_day(self) -> None:
-        """11-13 09:00 被 M07 占用：改到 09:30 只能待确认；另一条素材在 11-13 空白时段直接落草稿。"""
+        """11-13 09:00 被 M02 占用：改到 09:30 只能待确认；另一条素材在 11-13 空白时段直接落草稿。"""
         report = run_example("07-multiday", self.ledger)
         self.assertEqual(report["date"], "2026-11-12")
         self.assertEqual(report["dates"], ["2026-11-12", "2026-11-13"])
