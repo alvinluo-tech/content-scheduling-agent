@@ -402,6 +402,7 @@
     $("agent-summary").textContent = text(report.agent_summary, summaryFallback);
     var model = (report.model || {}).name || "—";
     $("footer-note").textContent = "运行 " + text(report.run_id) + " · 模型 " + model + " · " + text(report.note);
+    $("report-md").hidden = false;
 
     renderTrace(trace, report);
   }

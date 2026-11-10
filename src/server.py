@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import parse_qsl, unquote, urlparse
 
 from .main import load_env, run_pipeline
+from .markdown import render_report
 from .store import Store
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -72,6 +73,15 @@ CASE_META: list[dict[str, Any]] = [
 ]
 
 RUN_LOCK = threading.Lock()
+REPORT_LOCK = threading.Lock()
+LAST_REPORT: dict[str, Any] = {}
+
+
+def remember_report(report: dict[str, Any], trace: dict[str, Any]) -> None:
+    """记住最近一次运行，供 GET /api/report.md 导出；只存在内存里，不落盘。"""
+    with REPORT_LOCK:
+        LAST_REPORT.clear()
+        LAST_REPORT.update({"report": report, "trace": trace})
 
 
 def _load_or_default(path: Path, default: dict[str, Any]) -> dict[str, Any]:
@@ -137,6 +147,7 @@ def run_case(body: dict[str, Any]) -> dict[str, Any]:
         offline=bool(body.get("offline", True)),
         run_id=case,
     )
+    remember_report(report, trace)
     return {"status": "ok", "case": case, "report": report, "trace": trace, "state": snapshot()}
 
 
@@ -160,6 +171,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _download(self, filename: str, payload: bytes, content_type: str) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Content-Disposition", 'attachment; filename="' + filename + '"')
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(payload)
@@ -213,6 +233,7 @@ class Handler(BaseHTTPRequestHandler):
                             run_id=case,
                             on_trace_event=events.put,
                         )
+                        remember_report(report, trace)
                         events.put({"type": "report", "case": case, "report": report, "trace": trace, "state": snapshot()})
                     except Exception as exc:
                         traceback.print_exc()
@@ -240,6 +261,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/state":
             self._json(200, {"status": "ok", "state": snapshot()})
+            return
+        if path == "/api/report.md":
+            with REPORT_LOCK:
+                payload = dict(LAST_REPORT)
+            if not payload:
+                self._json(404, {"status": "error", "error": "还没有运行记录，先跑一个场景"})
+                return
+            text = render_report(payload["report"], payload["trace"])
+            run_id = str((payload.get("report") or {}).get("run_id") or "run")
+            self._download(run_id + ".report.md", text.encode("utf-8"), "text/markdown; charset=utf-8")
             return
         if path.startswith("/api/"):
             self._json(404, {"status": "error", "error": "未知接口"})

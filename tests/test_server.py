@@ -193,6 +193,23 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(after["draft"]["status"], "draft_ready")
         self.assertFalse(report["published"])
 
+    def test_markdown_export_needs_a_run_then_serves_the_last_one(self) -> None:
+        with server.REPORT_LOCK:
+            server.LAST_REPORT.clear()
+        status, body = self.get("/api/report.md")
+        self.assertEqual(status, 404)
+        self.assertIn("还没有运行记录", json.loads(body.decode("utf-8"))["error"])
+
+        status, _ = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
+        self.assertEqual(status, 200)
+        status, body = self.get("/api/report.md")
+        self.assertEqual(status, 200)
+        text = body.decode("utf-8")
+        self.assertIn("# 排期报告", text)
+        self.assertIn("## 决策记录", text)
+        self.assertIn("已发布：否", text)
+        self.assertIn("待用户确认", text)
+
     def test_unknown_confirmation_is_rejected(self) -> None:
         status, body = self.post("/api/confirm", {"confirmation_id": "C-NOPE"})
         self.assertEqual(status, 400)

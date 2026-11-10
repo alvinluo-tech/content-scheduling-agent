@@ -40,6 +40,8 @@ def run(case: str, reset: bool = True) -> dict:
         f"examples/{case}.output.json",
         "--trace",
         f"examples/{case}.trace.json",
+        "--report-md",
+        f"examples/{case}.report.md",
     ]
     completed = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if completed.returncode != 0:

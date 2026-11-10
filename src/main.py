@@ -10,6 +10,7 @@ from typing import Any, Callable
 from langchain_core.messages import HumanMessage
 
 from .graph import build_agent_graph
+from .markdown import render_report
 from .models import build_chat_model, build_system_prompt
 from .report import build_report
 from .store import Store, atomic_write_json
@@ -104,6 +105,11 @@ def run_once(args: argparse.Namespace) -> dict[str, Any]:
     if args.trace:
         atomic_write_json(Path(args.trace), trace_dict)
         report["trace_file"] = str(args.trace)
+    if getattr(args, "report_md", None):
+        md_path = Path(args.report_md)
+        md_path.parent.mkdir(parents=True, exist_ok=True)
+        md_path.write_text(render_report(report, trace_dict), encoding="utf-8")
+        report["report_md"] = str(args.report_md)
     if args.out:
         atomic_write_json(Path(args.out), report)
     return report
@@ -116,6 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ledger", default=None, help="草稿账本路径，默认 <data-dir>/drafts.json")
     parser.add_argument("--out", default=None, help="把结果 JSON 写入该路径（同时仍打印到 stdout）")
     parser.add_argument("--trace", default=None, help="把执行轨迹写入该路径")
+    parser.add_argument("--report-md", dest="report_md", default=None, help="把同一次运行渲染成人读的 Markdown 报告")
     parser.add_argument("--max-steps", type=int, default=None, help="模型-工具往返次数上限，达到即返回未完成状态")
     parser.add_argument("--offline", action="store_true", help="离线 Mock 模式：只验证流程，不代表真实模型决策")
     parser.add_argument(

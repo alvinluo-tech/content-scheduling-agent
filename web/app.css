@@ -359,3 +359,30 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
   .flash { animation: none; }
   .primary { transition: none; }
 }
+
+.md-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 10px 0 0;
+  flex-wrap: wrap;
+}
+
+.md-link {
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 2px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.md-link:hover {
+  color: var(--accent);
+}
+
+.md-hint {
+  font: 400 11px/1.4 var(--serif);
+  color: var(--ink-3);
+}
