@@ -5,7 +5,7 @@
 
 - 语言/框架：Python 3.10+ / LangGraph（显式 StateGraph + 工具节点）
 - 模型：DeepSeek 官方 API（OpenAI 兼容），默认 `deepseek-v4-pro`；无密钥时可用离线 Mock 跑通全流程
-- 交互形态：CLI（JSON 输入 → JSON 结果 + 逐步 trace）；另附一个可选的 Web 演示界面（同一引擎的薄壳）
+- 交互形态：CLI（JSON 输入 → JSON 结果 + 逐步 trace，可选导出 Markdown 报告）；另附一个可选的 Web 演示界面（同一引擎的薄壳）
 
 ## 60 秒上手
 
@@ -16,7 +16,8 @@ uv venv .venv && uv pip install --python .venv/Scripts/python.exe -r requirement
 
 # 2. 离线跑一遍（不需要任何密钥，验证流程与守卫）
 .venv/Scripts/python.exe -m src.main --input examples/02-conflict.input.json --offline \
-  --out examples/02-conflict.output.json --trace examples/02-conflict.trace.json
+  --out examples/02-conflict.output.json --trace examples/02-conflict.trace.json \
+  --report-md examples/02-conflict.report.md
 
 # 3. 一次跑完全部 7 个用例（会重置草稿账本）
 .venv/Scripts/python.exe scripts/run_examples.py
@@ -68,11 +69,15 @@ CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的
 
 ![时段冲突场景](docs/images/web-02-conflict.png)
 
+报告还能导出：界面上的「导出 Markdown 报告」按钮（`GET /api/report.md`，服务端只保留最近一次运行，不落盘），
+CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染，内容就是那份 `report` + 决策记录。
+
 截图：`docs/images/web-02-conflict.png`（冲突→待确认）、`web-03-rules.png`（信息缺失 + 规则风险）、
 `web-04-save-failure.png`（保存失败如实返回）、`web-06-step-limit.png`（步数上限中断）、
 `web-02-conflict-live.png`（同一场景走真实 DeepSeek：右上角切到「真实模型」，决策依据由模型自己写）、
 `web-02-conflict-streaming.png`（真实模型运行中的一帧：右栏逐条推送，中间上一轮结论压暗）、
-`web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）。
+`web-07-multiday.png`（多日排期：11-13 的占用与两份草稿、按天切换）、
+`web-report-md.png`（结论下方多出「导出 Markdown 报告」）。
 
 ## 评审入口（按题面验收点）
 
@@ -92,11 +97,11 @@ CLI 是主入口，Web 只是一层薄壳：它调用的仍是 `src/main.py` 的
 ## 目录
 
 ```
-src/        store / policy / tools / models / graph / trace / report / main / server（Web 演示用，标准库 http.server）
+src/        store / policy / tools / models / graph / trace / report / markdown / main / server（Web 演示用，标准库 http.server）
 data/       合成素材、审核规则、已有排期、草稿账本
-examples/   7 个用例的输入 + 实际输出 + trace + test-results.txt
+examples/   7 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      49 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、HTTP 接口 / SSE 推送）
+tests/      55 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、Markdown 报告、HTTP 接口 / SSE 推送）
 scripts/    run_examples.py（一键重跑全部用例）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```

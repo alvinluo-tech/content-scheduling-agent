@@ -30,6 +30,8 @@
 4. ~~把 CLI 包一层薄 HTTP API~~ 部分完成：已加 Web 演示层（`src/server.py` + `web/`，同一张图、`.runtime` 独立账本），生产 API 还缺鉴权与并发控制。
 5. ~~补多日占位~~ ✅ 已做（`schedule.json` 的 `days` + `requested_date`）；剩下多频道维度与并发保存（当前单文件账本，多进程同时写会丢更新）。
 6. ~~运行过程要能看见~~ ✅ 已做：`GET /api/stream`（SSE）+ `TraceRecorder` 监听器，截图见 `docs/images/web-02-conflict-streaming.png`。
+7. ~~报告只能看 JSON~~ ✅ 已做：`--report-md` / `GET /api/report.md` 共用 `src/markdown.py`，逐用例产物在 `examples/*.report.md`。
+   做法上刻意让它只是纯渲染：输入同一份 `report`，不重新判断结论，避免"人看的版本"和"机器看的版本"各说一套。
 
 ## 实际用时
 约 3 小时（需求拆解与验收点设计 30 min、工具与图实现 70 min、测试与用例 40 min、文档与归档 40 min）。
