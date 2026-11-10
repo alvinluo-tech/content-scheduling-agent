@@ -195,10 +195,6 @@ class AgentFlowTest(unittest.TestCase):
         )
         self.assertFalse([name for name in names if "publish" in name])
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_short_channel_conflict_stays_on_its_own_channel(self) -> None:
         """短视频频道 12:00 被 M00 占用、主频道同一时刻是空的：不许借道主频道，也不许把冲突说成空闲。"""
         report = run_example("09-channel", self.ledger)
@@ -218,4 +214,27 @@ if __name__ == "__main__":
         self.assertEqual(free["result_status"], "scheduled_draft")
         self.assertTrue(all(m["channel"] == "shorts" for m in report["materials"]))
         self.assertFalse(report["published"])
+
+    def test_two_requests_for_the_same_slot_never_double_book(self) -> None:
+        """两条硬性请求抢 13:00：先到的占住时段，后到的必须自己发现并登记待确认。"""
+        report = run_example("10-contention", self.ledger)
+        self.assertEqual(report["outcome"], "pending_confirmation")
+        first, second = report["materials"]
+        self.assertEqual(first["suggested_time"], "13:00")
+        self.assertEqual(first["draft"]["status"], "draft_ready")
+        self.assertFalse(first["requires_user_confirmation"])
+        self.assertEqual(second["suggested_time"], "13:30")
+        self.assertTrue(second["time_changed"])
+        self.assertEqual(second["draft"]["status"], "draft_pending_confirmation")
+        self.assertEqual(
+            [item["confirmation_id"] for item in second["pending_confirmations"]],
+            ["C-M02-2026-11-12-1330"],
+        )
+        booked = [(m["scheduled_date"], m["suggested_time"]) for m in report["materials"]]
+        self.assertEqual(len(booked), len(set(booked)))  # 同一次运行里也不许两条落在同一格
+        self.assertFalse(report["published"])
+
+
+if __name__ == "__main__":
+    unittest.main()
 

@@ -1,0 +1,22 @@
+{
+  "run_id": "case10-contention",
+  "now": "2026-11-12T09:20:00+08:00",
+  "$comment": "两条请求抢同一个空闲时段 13:00：先到的那条落草稿并占住时段，后到的那条必须自己发现冲突、提议 13:30 并登记待确认——同一次运行里也不能双订。",
+  "requests": [
+    {
+      "material_id": "M01",
+      "requested_time": "13:00",
+      "time_hard": true,
+      "note": "午后首发，不能挪"
+    },
+    {
+      "material_id": "M02",
+      "requested_time": "13:00",
+      "time_hard": true,
+      "note": "同一份排期表上标的就是 13:00"
+    }
+  ],
+  "simulate": {
+    "save_failures": 0
+  }
+}

@@ -14,9 +14,13 @@ test_reference_instance_conflict (tests.test_agent_flow.AgentFlowTest.test_refer
 题面参考实例：M01 要求 18:00 被占用，19:00 可用 → 只能标记待确认，不能称已发布。 ... ok
 test_rules_risk_and_missing_info (tests.test_agent_flow.AgentFlowTest.test_rules_risk_and_missing_info) ... ok
 test_save_failure_is_reported_as_failure (tests.test_agent_flow.AgentFlowTest.test_save_failure_is_reported_as_failure) ... ok
+test_short_channel_conflict_stays_on_its_own_channel (tests.test_agent_flow.AgentFlowTest.test_short_channel_conflict_stays_on_its_own_channel)
+短视频频道 12:00 被 M00 占用、主频道同一时刻是空的：不许借道主频道，也不许把冲突说成空闲。 ... ok
 test_step_limit_enforced_from_cli_flag (tests.test_agent_flow.AgentFlowTest.test_step_limit_enforced_from_cli_flag) ... ok
 test_step_limit_returns_incomplete_status (tests.test_agent_flow.AgentFlowTest.test_step_limit_returns_incomplete_status) ... ok
 test_trace_schema (tests.test_agent_flow.AgentFlowTest.test_trace_schema) ... ok
+test_two_requests_for_the_same_slot_never_double_book (tests.test_agent_flow.AgentFlowTest.test_two_requests_for_the_same_slot_never_double_book)
+两条硬性请求抢 13:00：先到的占住时段，后到的必须自己发现并登记待确认。 ... ok
 test_cli_writes_markdown_file (tests.test_markdown.MarkdownReportTest.test_cli_writes_markdown_file) ... ok
 test_conflict_report_keeps_confirmation_and_never_claims_publish (tests.test_markdown.MarkdownReportTest.test_conflict_report_keeps_confirmation_and_never_claims_publish) ... ok
 test_decision_table_lists_every_tool_call (tests.test_markdown.MarkdownReportTest.test_decision_table_lists_every_tool_call) ... ok
@@ -88,6 +92,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 83 tests in 5.819s
+Ran 85 tests in 8.108s
 
 OK

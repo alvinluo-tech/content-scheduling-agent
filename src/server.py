@@ -83,6 +83,12 @@ CASE_META: list[dict[str, Any]] = [
         "tag": "频道",
         "note": "shorts 的 12:00 被 M00 占用（主频道同一时刻是空的）：M02 只能提议 12:30 并待确认，M06 13:00 直接落草稿",
     },
+    {
+        "file": "10-contention",
+        "title": "两条抢同一时段",
+        "tag": "竞争",
+        "note": "M01 先落 13:00 草稿并占住时段，M02 硬性也要 13:00：只能提议 13:30 并待确认，同一次运行内也不双订",
+    },
 ]
 
 RUN_LOCK = threading.Lock()

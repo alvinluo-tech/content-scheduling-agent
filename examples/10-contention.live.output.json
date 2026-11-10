@@ -1,0 +1,155 @@
+{
+  "run_id": "case10-contention",
+  "date": "2026-11-12",
+  "channel": "main",
+  "channels": [
+    "main",
+    "shorts"
+  ],
+  "dates": [
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-14",
+    "2026-11-15"
+  ],
+  "status": "completed",
+  "completed": true,
+  "outcome": "pending_confirmation",
+  "model": {
+    "mode": "deepseek",
+    "name": "deepseek-v4-pro"
+  },
+  "limits": {
+    "max_steps": 20,
+    "steps_used": 7,
+    "tool_calls": 10
+  },
+  "summary": {
+    "total": 2,
+    "scheduled_draft": 1,
+    "scheduled_pending_confirmation": 1
+  },
+  "materials": [
+    {
+      "material_id": "M01",
+      "title": "城市夜骑 30 秒混剪",
+      "channel": "main",
+      "channel_label": "主频道",
+      "requested_date": "2026-11-12",
+      "requested_time": "13:00",
+      "time_hard": true,
+      "review_status": "pass",
+      "risk_reasons": [],
+      "missing_fields": [],
+      "scheduled_date": "2026-11-12",
+      "suggested_time": "13:00",
+      "time_changed": false,
+      "date_changed": false,
+      "hard_time_preserved": true,
+      "requires_user_confirmation": false,
+      "rejected_confirmations": [],
+      "pending_confirmations": [],
+      "slot_options": [
+        {
+          "date": "2026-11-12",
+          "time": "13:30",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "14:00",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "14:30",
+          "kind": "same_day"
+        }
+      ],
+      "draft": {
+        "draft_id": "D-M01-2026-11-12-1300",
+        "channel": "main",
+        "scheduled_date": "2026-11-12",
+        "scheduled_time": "13:00",
+        "status": "draft_ready",
+        "submit_count": 1,
+        "published": false
+      },
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "scheduled_draft"
+    },
+    {
+      "material_id": "M02",
+      "title": "新机开箱速览以及全场景续航实测说明",
+      "channel": "main",
+      "channel_label": "主频道",
+      "requested_date": "2026-11-12",
+      "requested_time": "13:00",
+      "time_hard": true,
+      "review_status": "pass_with_warnings",
+      "risk_reasons": [
+        {
+          "rule_id": "R04",
+          "severity": "warning",
+          "reason": "标题超长，建议压缩后再排期（当前 17 字，上限 16）"
+        }
+      ],
+      "missing_fields": [],
+      "scheduled_date": "2026-11-12",
+      "suggested_time": "13:30",
+      "time_changed": true,
+      "date_changed": false,
+      "hard_time_preserved": false,
+      "requires_user_confirmation": true,
+      "rejected_confirmations": [],
+      "pending_confirmations": [
+        {
+          "confirmation_id": "C-M02-2026-11-12-1330",
+          "question": "M02 要求的 13:00 已被 M01（同样硬性要求 13:00）占用，是否同意把 M02 改到 13:30？",
+          "proposed_date": "2026-11-12",
+          "proposed_time": "13:30",
+          "status": "pending",
+          "decided_by": null,
+          "decided_at": null,
+          "replanned_from": null
+        }
+      ],
+      "slot_options": [
+        {
+          "date": "2026-11-12",
+          "time": "13:30",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "14:00",
+          "kind": "same_day"
+        },
+        {
+          "date": "2026-11-12",
+          "time": "14:30",
+          "kind": "same_day"
+        }
+      ],
+      "draft": {
+        "draft_id": "D-M02-2026-11-12-1300",
+        "channel": "main",
+        "scheduled_date": "2026-11-12",
+        "scheduled_time": "13:30",
+        "status": "draft_pending_confirmation",
+        "submit_count": 1,
+        "published": false
+      },
+      "failed_save_attempts": 0,
+      "published": false,
+      "result_status": "scheduled_pending_confirmation"
+    }
+  ],
+  "unfinished_materials": [],
+  "published": false,
+  "agent_summary": "本次排期请求已处理完毕，两条素材都只保存了草稿，未发布。\n\n**处理结果：**\n\n1. **M01（城市夜骑 30 秒混剪）**\n   - 审核通过（can_draft=true）。\n   - 13:00 main 时段空闲，硬性时间未被改动，已保存草稿 `D-M01-2026-11-12-1300`（status: draft_ready）。\n\n2. **M02（新机开箱速览以及全场景续航实测说明）**\n   - 审核结果为 pass_with_warnings：标题 17 字超过上限 16 字（命中 R04，仅警告，不阻断保存）。\n   - 硬性要求的 13:00 与 M01 冲突（13:00 已被 M01 草稿占用），不能擅自改动硬性时间，因此已登记待确认项 `C-M02-2026-11-12-1330`，建议改到最近的 **13:30**。\n   - 已在 13:30 保存草稿 `D-M02-2026-11-12-1300`（status: draft_pending_confirmation，time_changed=true）。\n\n**需要你拍板的事项：**\n- M02 是否同意从硬性要求的 13:00 改到 13:30？目前只是建议，尚未确认。\n- M02 标题超长（17 字 > 16 字），建议压缩后再排期，属警告项，可自行决定是否处理。\n\n两条均未发布、未上线，仅保存草稿；M02 的时段改动需要你确认后才算最终排期。",
+  "note": "仅保存排期草稿，未接真实发布通道；published 恒为 false。",
+  "trace_file": "examples/10-contention.live.trace.json",
+  "report_md": "examples/10-contention.live.report.md"
+}

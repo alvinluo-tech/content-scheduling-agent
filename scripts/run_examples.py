@@ -60,6 +60,7 @@ def main() -> int:
         ("07-multiday", True),
         ("08-day-overflow", True),
         ("09-channel", True),
+        ("10-contention", True),
     ]
     rows = []
     for case, reset in plan:
