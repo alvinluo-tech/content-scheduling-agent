@@ -53,6 +53,29 @@ class ToolboxTest(unittest.TestCase):
         self.assertFalse(result["published"])
         self.assertFalse(result["deduplicated"])
 
+    def test_rejected_confirmation_voids_the_draft_and_blocks_the_same_plan(self) -> None:
+        self.read_and_check("M01")
+        self.toolbox.call(
+            "request_confirmation",
+            {
+                "material_id": "M01",
+                "proposed_time": "19:00",
+                "question": "18:00 硬性要求但被占用，是否改到 19:00？",
+                "reason": "硬性要求不能擅自改",
+            },
+        )
+        self.assertTrue(
+            self.toolbox.call("save_draft", {"material_id": "M01", "scheduled_time": "19:00", "reason": "先存待确认草稿"})["ok"]
+        )
+        record = self.store.reject_confirmation("C-M01-2026-11-12-1900")
+        self.assertEqual(record["status"], "rejected")
+        self.assertEqual(self.store.draft("2026-11-12", "M01", "18:00")["status"], "draft_rejected")
+
+        again = self.toolbox.call("save_draft", {"material_id": "M01", "scheduled_time": "19:00", "reason": "再存一次同一方案"})
+        self.assertFalse(again["ok"])
+        self.assertEqual(again["error"]["code"], "CONFIRMATION_REJECTED")
+        self.assertTrue(again["error"]["recoverable"])
+
     def test_slot_query_explains_why_a_slot_is_recommended(self) -> None:
         slot = self.toolbox.call("query_time_slot", {"material_id": "M01", "time": "18:00", "reason": "查冲突与替代"})
         ranked = slot["ranked_alternatives"]

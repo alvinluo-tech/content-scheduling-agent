@@ -69,26 +69,33 @@ def run_pipeline(
 
 
 def apply_approvals(args: argparse.Namespace) -> None:
-    """人工确认通道（模型没有这个工具）：把待确认项标记为 approved 后，下一轮才能直接落草稿。"""
-    ids = getattr(args, "approve", None) or []
-    if not ids:
+    """人工决策通道（模型没有这些工具）：同意落成 approved，否决落成 rejected 并作废那份草稿。"""
+    approved = getattr(args, "approve", None) or []
+    rejected = getattr(args, "reject", None) or []
+    if not approved and not rejected:
         return
     store = Store(args.data_dir, args.ledger)
-    for confirmation_id in ids:
-        record = store.approve_confirmation(confirmation_id)
-        print(
-            json.dumps(
-                {
-                    "status": "approved",
-                    "confirmation_id": record["confirmation_id"],
-                    "material_id": record["material_id"],
-                    "proposed_time": record["proposed_time"],
-                    "approved_by": record.get("approved_by"),
-                },
-                ensure_ascii=False,
-            ),
-            file=sys.stderr,
-        )
+    for ids, action in ((approved, "approve"), (rejected, "reject")):
+        for confirmation_id in ids:
+            record = (
+                store.approve_confirmation(confirmation_id)
+                if action == "approve"
+                else store.reject_confirmation(confirmation_id)
+            )
+            print(
+                json.dumps(
+                    {
+                        "status": record["status"],
+                        "confirmation_id": record["confirmation_id"],
+                        "material_id": record["material_id"],
+                        "proposed_date": record.get("proposed_date", record.get("date")),
+                        "proposed_time": record["proposed_time"],
+                        "decided_by": record.get("approved_by") or record.get("rejected_by"),
+                    },
+                    ensure_ascii=False,
+                ),
+                file=sys.stderr,
+            )
 
 
 def run_once(args: argparse.Namespace) -> dict[str, Any]:
@@ -130,6 +137,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         metavar="CONFIRMATION_ID",
         help="人工确认某个待确认项（可重复），随后再跑一次即可落成 draft_ready；模型没有这个能力",
+    )
+    parser.add_argument(
+        "--reject",
+        action="append",
+        metavar="CONFIRMATION_ID",
+        help="人工否决某个待确认项（可重复）：该改期方案连同它的待确认草稿一起作废；模型没有这个能力",
     )
     return parser
 

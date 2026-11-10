@@ -334,6 +334,9 @@ h1, h2, h3, p, dl, dd, ol, ul, pre { margin: 0; }
   color: var(--accent); cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease;
 }
+.confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.confirm-btn.reject { color: var(--ink-2); border-style: dashed; }
+.confirm-btn.reject:hover { background: transparent; border-color: var(--ink-3); color: var(--ink); }
 .confirm-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
 .confirm-btn:disabled { opacity: 0.55; cursor: default; }
 

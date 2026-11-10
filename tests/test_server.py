@@ -220,6 +220,25 @@ class ServerTestCase(unittest.TestCase):
         self.assertIn("已发布：否", text)
         self.assertIn("待用户确认", text)
 
+    def test_human_rejection_voids_the_draft_and_stops_the_same_plan(self) -> None:
+        status, body = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
+        self.assertEqual(status, 200)
+        confirmation_id = body["report"]["materials"][0]["pending_confirmations"][0]["confirmation_id"]
+
+        status, rejected = self.post("/api/reject", {"confirmation_id": confirmation_id})
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["confirmation"]["status"], "rejected")
+
+        status, again = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": False})
+        self.assertEqual(status, 200)
+        report = again["report"]
+        material = report["materials"][0]
+        self.assertEqual(material["result_status"], "confirmation_rejected")
+        self.assertEqual(material["rejected_confirmations"], [confirmation_id])
+        self.assertEqual(material["draft"]["status"], "draft_rejected")
+        self.assertEqual(report["outcome"], "failed")
+        self.assertFalse(report["published"])
+
     def test_unknown_confirmation_is_rejected(self) -> None:
         status, body = self.post("/api/confirm", {"confirmation_id": "C-NOPE"})
         self.assertEqual(status, 400)

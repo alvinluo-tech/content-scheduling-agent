@@ -39,6 +39,7 @@
       "date_changed": false,
       "hard_time_preserved": false,
       "requires_user_confirmation": true,
+      "rejected_confirmations": [],
       "pending_confirmations": [
         {
           "confirmation_id": "C-M01-2026-11-12-1900",

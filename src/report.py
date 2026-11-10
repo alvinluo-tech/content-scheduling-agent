@@ -13,9 +13,10 @@ CONCLUDED = {
     "needs_info",
     "blocked",
     "save_failed",
+    "confirmation_rejected",
     "material_not_found",
 }
-FAILED_STATUSES = {"save_failed", "blocked", "needs_info", "material_not_found"}
+FAILED_STATUSES = {"save_failed", "blocked", "needs_info", "confirmation_rejected", "material_not_found"}
 
 
 def _outcome(statuses: list[str], terminal: str) -> str:
@@ -40,6 +41,8 @@ def _material_status(
 ) -> str:
     if not review["can_draft"]:
         return "needs_info" if review["review_status"] == "missing_info" else "blocked"
+    if draft is not None and draft["status"] == "draft_rejected":
+        return "confirmation_rejected"
     if draft is not None:
         return "scheduled_pending_confirmation" if draft["status"] == "draft_pending_confirmation" else "scheduled_draft"
     if failed_save_attempts:
@@ -102,6 +105,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                 "date_changed": date_changed,
                 "hard_time_preserved": not ((draft or {}).get("time_changed", False) or date_changed),
                 "requires_user_confirmation": any(c["status"] == "pending" for c in confirmations),
+                "rejected_confirmations": [c["confirmation_id"] for c in confirmations if c.get("status") == "rejected"],
                 "pending_confirmations": [
                     {
                         "confirmation_id": c["confirmation_id"],

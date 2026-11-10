@@ -45,6 +45,7 @@
       "date_changed": false,
       "hard_time_preserved": true,
       "requires_user_confirmation": false,
+      "rejected_confirmations": [],
       "pending_confirmations": [],
       "draft": {
         "draft_id": "D-M02-2026-11-12-1100",

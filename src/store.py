@@ -111,6 +111,29 @@ class Store:
         self.commit()
         return record
 
+    def reject_confirmation(self, confirmation_id: str, actor: str = "human", note: str = "") -> dict[str, Any]:
+        """人工否决：同样只有人能调用。被否决的替代方案连同它那份待确认草稿一起作废。"""
+        record = self.confirmations.get(confirmation_id)
+        if record is None:
+            raise ValueError(f"没有待确认项 {confirmation_id}")
+        if record.get("status") == "rejected":
+            return record
+        record["status"] = "rejected"
+        record["rejected_by"] = actor
+        record["rejected_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        if note:
+            record["reject_note"] = note
+        for draft in self.drafts.values():
+            if (
+                draft["material_id"] == record["material_id"]
+                and draft["status"] == "draft_pending_confirmation"
+                and draft["date"] == record.get("proposed_date", record.get("date"))
+                and draft["scheduled_time"] == record["proposed_time"]
+            ):
+                draft["status"] = "draft_rejected"
+        self.commit()
+        return record
+
     def confirmations_for(self, requested_date: str, material_id: str, requested_time: str) -> list[dict[str, Any]]:
         """按“用户原本要求的那一天 + 那个时间”找确认项；提议日期在 proposed_date 上。"""
         return [

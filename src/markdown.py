@@ -24,6 +24,7 @@ RESULT_LABEL = {
     "needs_info": "信息缺失",
     "blocked": "已阻断（规则风险）",
     "save_failed": "保存失败",
+    "confirmation_rejected": "用户已否决该改期",
     "material_not_found": "素材不存在",
     "unresolved": "未完成",
     "not_processed": "未处理",
@@ -39,8 +40,10 @@ REVIEW_LABEL = {
 DRAFT_LABEL = {
     "draft_ready": "draft_ready（可直接用）",
     "draft_pending_confirmation": "draft_pending_confirmation（待用户点头）",
+    "draft_rejected": "draft_rejected（用户否决后作废）",
 }
 
+PENDING_LABEL = {"pending": "pending 待拍板", "approved": "approved 已同意", "rejected": "rejected 已否决"}
 SEVERITY_MARK = {"blocking": "阻断", "warning": "警告", "manual_review": "人工复核"}
 TICK = chr(96)
 
@@ -79,7 +82,7 @@ def _material_section(row: dict[str, Any], index: int) -> list[str]:
         lines.append("- 硬性要求保持不变：" + _yes(row.get("hard_time_preserved")))
     for item in row.get("pending_confirmations") or []:
         lines.append(
-            "- 待确认 " + _code(item["confirmation_id"]) + "（" + str(item["status"]) + "）："
+            "- 待确认 " + _code(item["confirmation_id"]) + "（" + PENDING_LABEL.get(str(item["status"]), str(item["status"])) + "）："
             + str(item["question"]) + " → 建议 " + str(item.get("proposed_date")) + " " + str(item["proposed_time"])
         )
     draft = row.get("draft")

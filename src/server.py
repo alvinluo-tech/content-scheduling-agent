@@ -306,6 +306,18 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 self._json(200, {"status": "ok", "confirmation": record, "state": snapshot()})
             return
+        if path == "/api/reject":
+            with RUN_LOCK:
+                try:
+                    store = Store(DATA_DIR, LEDGER_PATH)
+                    record = store.reject_confirmation(
+                        str(body.get("confirmation_id") or ""), note=str(body.get("note") or "")
+                    )
+                except ValueError as exc:
+                    self._json(400, {"status": "error", "error": str(exc)})
+                    return
+                self._json(200, {"status": "ok", "confirmation": record, "state": snapshot()})
+            return
         if path == "/api/run":
             with RUN_LOCK:
                 try:

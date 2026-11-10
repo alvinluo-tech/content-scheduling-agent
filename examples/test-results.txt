@@ -31,6 +31,7 @@ test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_g
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
 test_human_approval_turns_pending_draft_into_ready (tests.test_server.ServerTestCase.test_human_approval_turns_pending_draft_into_ready) ... ok
+test_human_rejection_voids_the_draft_and_stops_the_same_plan (tests.test_server.ServerTestCase.test_human_rejection_voids_the_draft_and_stops_the_same_plan) ... ok
 test_index_is_served (tests.test_server.ServerTestCase.test_index_is_served) ... ok
 test_index_keeps_the_keyboard_and_screen_reader_hooks (tests.test_server.ServerTestCase.test_index_keeps_the_keyboard_and_screen_reader_hooks) ... ok
 test_markdown_export_needs_a_run_then_serves_the_last_one (tests.test_server.ServerTestCase.test_markdown_export_needs_a_run_then_serves_the_last_one) ... ok
@@ -60,6 +61,7 @@ test_missing_reason_is_rejected (tests.test_tools.ToolboxTest.test_missing_reaso
 test_occupied_slot_is_rejected (tests.test_tools.ToolboxTest.test_occupied_slot_is_rejected) ... ok
 test_other_material_draft_occupies_slot (tests.test_tools.ToolboxTest.test_other_material_draft_occupies_slot) ... ok
 test_own_draft_does_not_conflict_with_itself (tests.test_tools.ToolboxTest.test_own_draft_does_not_conflict_with_itself) ... ok
+test_rejected_confirmation_voids_the_draft_and_blocks_the_same_plan (tests.test_tools.ToolboxTest.test_rejected_confirmation_voids_the_draft_and_blocks_the_same_plan) ... ok
 test_review_not_passed_blocks_saving (tests.test_tools.ToolboxTest.test_review_not_passed_blocks_saving) ... ok
 test_save_failure_is_reported_not_hidden (tests.test_tools.ToolboxTest.test_save_failure_is_reported_not_hidden) ... ok
 test_slot_query_explains_why_a_slot_is_recommended (tests.test_tools.ToolboxTest.test_slot_query_explains_why_a_slot_is_recommended) ... ok
@@ -67,6 +69,6 @@ test_tool_not_registered (tests.test_tools.ToolboxTest.test_tool_not_registered)
 test_unknown_material_is_reported (tests.test_tools.ToolboxTest.test_unknown_material_is_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 63 tests in 7.484s
+Ran 65 tests in 6.654s
 
 OK

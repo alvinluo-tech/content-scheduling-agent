@@ -7,6 +7,7 @@
     needs_info: { label: "信息不足", tone: "warn" },
     blocked: { label: "规则阻断", tone: "block" },
     save_failed: { label: "保存失败", tone: "block" },
+    confirmation_rejected: { label: "改期被否决", tone: "block" },
     material_not_found: { label: "素材不存在", tone: "block" },
     unresolved: { label: "未完成", tone: "muted" },
     not_processed: { label: "未处理", tone: "muted" }
@@ -30,7 +31,8 @@
 
   var DRAFT_STATUS = {
     draft_ready: "已存草稿",
-    draft_pending_confirmation: "待确认草稿"
+    draft_pending_confirmation: "待确认草稿",
+    draft_rejected: "已否决 · 草稿作废"
   };
 
   var REVIEW = {
@@ -393,10 +395,16 @@
         conf.appendChild(el("span", "mono", text(item.confirmation_id) + " · " + text(item.status)));
         conf.appendChild(el("div", null, text(item.question)));
         if (item.status === "pending") {
+          var actions = el("div", "confirm-actions");
           var approve = el("button", "confirm-btn", "记为用户已确认");
           approve.type = "button";
-          approve.addEventListener("click", function () { approveConfirmation(item.confirmation_id, approve); });
-          conf.appendChild(approve);
+          approve.addEventListener("click", function () { decide(item.confirmation_id, approve, "approve"); });
+          var reject = el("button", "confirm-btn reject", "不同意这个改期");
+          reject.type = "button";
+          reject.addEventListener("click", function () { decide(item.confirmation_id, reject, "reject"); });
+          actions.appendChild(approve);
+          actions.appendChild(reject);
+          conf.appendChild(actions);
         }
         list.appendChild(conf);
       });
@@ -591,23 +599,24 @@
     };
   }
 
-  /* 人工确认走 /api/confirm：模型工具集里没有这个动作，只有人点这一下才算同意。 */
-  function approveConfirmation(confirmationId, btn) {
+  /* 人工决策走 /api/confirm 与 /api/reject：模型工具集里没有这两个动作，只有人点这一下才算拍板。 */
+  function decide(confirmationId, btn, action) {
     if (running) { return; }
+    var idle = btn.textContent;
     btn.disabled = true;
     btn.textContent = "记录中…";
-    fetchJSON("/api/confirm", {
+    fetchJSON(action === "approve" ? "/api/confirm" : "/api/reject", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confirmation_id: confirmationId })
     }).then(function (payload) {
       state = payload.state || state;
       renderMeta(state);
-      $("reset-ledger").checked = false;  // 别把刚写下的确认清掉
+      $("reset-ledger").checked = false;  // 别把刚写下的决策清掉
       return run();
     }).catch(function (err) {
       btn.disabled = false;
-      btn.textContent = "记为用户已确认";
+      btn.textContent = idle;
       showError(err.message || String(err));
     });
   }

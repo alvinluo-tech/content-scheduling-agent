@@ -75,10 +75,13 @@ class ScriptedChatModel:
                 if name in DATE_AWARE_TOOLS and req.get("requested_date") and "date" not in args:
                     args["date"] = req["requested_date"]
                 return self._call(name, args)
-        done = sum(1 for h in history if h["tool"] == "save_draft")
+        saves = [h for h in history if h["tool"] == "save_draft"]
+        stored = sum(1 for h in saves if (h["result"] or {}).get("ok"))
+        failed = len(saves) - stored
+        tail = f"，其中草稿写入成功 {stored} 次、失败 {failed} 次" if failed else f"，其中草稿保存 {stored} 次"
         return AIMessage(
             content=(
-                f"离线 Mock 执行结束：共 {len(history)} 次工具调用，其中草稿保存 {done} 次。"
+                f"离线 Mock 执行结束：共 {len(history)} 次工具调用{tail}。"
                 "本结果只验证流程正确性，不代表真实模型的决策质量。"
             )
         )
@@ -138,6 +141,8 @@ def _next_action(req: dict[str, Any], history: list[dict[str, Any]]) -> tuple[st
                     "scheduled_time": save["args"].get("scheduled_time", req["requested_time"]),
                     "reason": "保存返回失败，重试一次确认是偶发还是持续失败",
                 }
+            return None
+        if code == "CONFIRMATION_REJECTED":
             return None
         if code == "HARD_CONSTRAINT_VIOLATION" and confirm is None:
             proposal = _proposal(query, req)

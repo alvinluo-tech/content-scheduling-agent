@@ -353,6 +353,18 @@ class Toolbox:
             and c["status"] in ("pending", "approved")
         ]
         awaiting_user = any(c["status"] == "pending" for c in approvals)
+        rejected = [
+            c for c in self.store.confirmations_for(requested_date, material_id, requested_time)
+            if c.get("proposed_date", c.get("date")) == scheduled_date
+            and c["proposed_time"] == scheduled_time
+            and c.get("status") == "rejected"
+        ]
+        if rejected:
+            return _err(
+                "CONFIRMATION_REJECTED",
+                f"用户已经否决了把 {requested_date} {requested_time} 改到 {scheduled_date} {scheduled_time}",
+                hint="换一个替代时段重新查，或请用户给出新的要求；不要绕过否决再存同一个方案",
+            )
         if changed and request.get("time_hard") and not approvals:
             return _err(
                 "HARD_CONSTRAINT_VIOLATION",
