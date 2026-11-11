@@ -106,8 +106,11 @@ test_business_errors_are_not_rejected_here (tests.test_validation.ValidationTest
 test_duplicate_material_is_refused_with_both_positions (tests.test_validation.ValidationTest.test_duplicate_material_is_refused_with_both_positions) ... ok
 test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inputs_pass) ... ok
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
+test_a_claim_of_publishing_is_caught (tests.test_verify_script.VerifySubmissionTest.test_a_claim_of_publishing_is_caught) ... ok
+test_a_draft_after_a_save_failure_is_caught (tests.test_verify_script.VerifySubmissionTest.test_a_draft_after_a_save_failure_is_caught) ... ok
+test_every_acceptance_point_passes_on_the_archived_examples (tests.test_verify_script.VerifySubmissionTest.test_every_acceptance_point_passes_on_the_archived_examples) ... ok
 
 ----------------------------------------------------------------------
-Ran 101 tests in 9.208s
+Ran 104 tests in 9.344s
 
 OK
