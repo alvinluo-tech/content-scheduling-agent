@@ -14,9 +14,10 @@ CONCLUDED = {
     "blocked",
     "save_failed",
     "confirmation_rejected",
+    "draft_revoked",
     "material_not_found",
 }
-FAILED_STATUSES = {"save_failed", "blocked", "needs_info", "confirmation_rejected", "material_not_found"}
+FAILED_STATUSES = {"save_failed", "blocked", "needs_info", "confirmation_rejected", "draft_revoked", "material_not_found"}
 
 
 def _outcome(statuses: list[str], terminal: str) -> str:
@@ -43,6 +44,8 @@ def _material_status(
         return "needs_info" if review["review_status"] == "missing_info" else "blocked"
     if draft is not None and draft["status"] == "draft_rejected":
         return "confirmation_rejected"
+    if draft is not None and draft["status"] == "draft_revoked":
+        return "draft_revoked"
     if draft is not None:
         return "scheduled_pending_confirmation" if draft["status"] == "draft_pending_confirmation" else "scheduled_draft"
     if failed_save_attempts:

@@ -87,6 +87,8 @@ class ServerTestCase(unittest.TestCase):
         self.assertIn("withToken", js)
         self.assertIn('id="ledger-panel"', html)
         self.assertIn("renderLedger", js)
+        self.assertIn("revokeDraft", js)
+        self.assertIn("draft_revoked", js)
         _, css = self.get("/app.css")
         # .token-row 用 display:flex，会把 [hidden] 的默认 display:none 顶掉，必须显式写一条
         self.assertIn(".token-row[hidden]", css.decode("utf-8"))
@@ -121,6 +123,39 @@ class ServerTestCase(unittest.TestCase):
         for step in steps:
             self.assertTrue(step["rationale"])
             self.assertIn("ok", step["observation"])
+
+    def test_human_can_revoke_a_ready_draft_and_free_the_slot(self) -> None:
+        status, body = self.post("/api/run", {"case": "01-normal", "offline": True, "reset": True})
+        self.assertEqual(status, 200)
+        draft = body["report"]["materials"][0]["draft"]
+        self.assertEqual(draft["status"], "draft_ready")
+
+        status, body = self.post("/api/revoke", {"draft_id": draft["draft_id"]})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["draft"]["status"], "draft_revoked")
+        self.assertEqual(body["draft"]["revoked_by"], "human")
+        drafts = list(body["state"]["drafts"].values())
+        self.assertEqual([item["status"] for item in drafts], ["draft_revoked"])
+
+        again_status, again = self.post("/api/revoke", {"draft_id": draft["draft_id"]})
+        self.assertEqual(again_status, 200)
+        self.assertEqual(again["draft"]["status"], "draft_revoked")
+
+        # 撤回后 11:00 不再被占：换成别的素材硬性要求同一时段，可以直接落草稿
+        status, body = self.post("/api/custom", {"requests": [
+            {"material_id": "M01", "requested_time": "11:00", "time_hard": True}
+        ]})
+        self.assertEqual(status, 200)
+        events = self.stream("/api/stream?case=" + body["case"] + "&offline=1")
+        report = [payload for name, payload in events if name == "report"][0]["report"]
+        self.assertEqual(report["outcome"], "scheduled")
+        self.assertEqual(report["materials"][0]["suggested_time"], "11:00")
+        self.assertFalse(report["published"])
+
+    def test_revoking_an_unknown_draft_is_refused(self) -> None:
+        status, body = self.post("/api/revoke", {"draft_id": "D-M99-2026-11-12-1800"})
+        self.assertEqual(status, 400)
+        self.assertIn("没有草稿", body["error"])
 
     def stream(self, path: str):
         """把 SSE 响应读成 [(event, payload)]，读完即连接关闭。"""

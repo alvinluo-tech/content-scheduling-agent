@@ -72,11 +72,12 @@ def run_pipeline(
 
 
 def apply_approvals(args: argparse.Namespace) -> None:
-    """人工决策通道（模型没有这些工具）：同意落 approved；否决落 rejected 并作废草稿；改选落一条 approved。"""
+    """人工决策通道（模型没有这些工具）：同意落 approved；否决落 rejected 并作废草稿；改选落一条 approved；撤回让草稿退出占位。"""
     approved = getattr(args, "approve", None) or []
     rejected = getattr(args, "reject", None) or []
     replanned = getattr(args, "replan", None) or []
-    if not approved and not rejected and not replanned:
+    revoked = getattr(args, "revoke", None) or []
+    if not approved and not rejected and not replanned and not revoked:
         return
     store = Store(args.data_dir, args.ledger)
     decisions = [(cid, "approve") for cid in approved]
@@ -93,6 +94,22 @@ def apply_approvals(args: argparse.Namespace) -> None:
                     "proposed_date": record.get("proposed_date", record.get("date")),
                     "proposed_time": record["proposed_time"],
                     "decided_by": record.get("approved_by") or record.get("rejected_by") or record.get("decided_by"),
+                },
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+    for draft_id in revoked:
+        draft = store.revoke_draft(draft_id)
+        print(
+            json.dumps(
+                {
+                    "status": draft["status"],
+                    "draft_id": draft["draft_id"],
+                    "material_id": draft["material_id"],
+                    "date": draft.get("date"),
+                    "scheduled_time": draft.get("scheduled_time"),
+                    "decided_by": draft.get("revoked_by"),
                 },
                 ensure_ascii=False,
             ),
@@ -168,6 +185,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         metavar="CONFIRMATION_ID=HH:MM",
         help="人不同意模型提的时段、自己改选一个（可重复）：写成 C-...=19:30，也可带日期 C-...='2026-11-12 19:30'",
+    )
+    parser.add_argument(
+        "--revoke",
+        action="append",
+        metavar="DRAFT_ID",
+        help="人工撤回一份已存草稿（可重复）：它不再占位、不再算待发布；模型没有这个能力",
     )
     return parser
 

@@ -25,6 +25,7 @@ RESULT_LABEL = {
     "blocked": "已阻断（规则风险）",
     "save_failed": "保存失败",
     "confirmation_rejected": "用户已否决该改期",
+    "draft_revoked": "草稿已被撤回",
     "material_not_found": "素材不存在",
     "unresolved": "未完成",
     "not_processed": "未处理",
@@ -41,6 +42,7 @@ DRAFT_LABEL = {
     "draft_ready": "draft_ready（可直接用）",
     "draft_pending_confirmation": "draft_pending_confirmation（待用户点头）",
     "draft_rejected": "draft_rejected（用户否决后作废）",
+    "draft_revoked": "draft_revoked（已由人撤回，不再占位）",
 }
 
 PENDING_LABEL = {"pending": "pending 待拍板", "approved": "approved 已同意", "rejected": "rejected 已否决"}

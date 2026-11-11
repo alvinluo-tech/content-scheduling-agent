@@ -462,3 +462,6 @@ input:focus-visible {
 .ledger-row code { font-family: var(--mono); font-size: 10px; color: var(--ink); }
 .ledger-row span { font-family: var(--serif); font-size: 11px; color: var(--ink-2); }
 .ledger-row em { font-style: normal; font-family: var(--serif); font-size: 10.5px; color: var(--accent); }
+.ledger-actions { display: flex; gap: 6px; margin-top: 2px; }
+.ledger-actions .confirm-btn { font-size: 10px; padding: 1px 6px; }
+.confirm-btn.revoke { border-style: dotted; color: var(--ink-2); }

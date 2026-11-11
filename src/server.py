@@ -435,6 +435,16 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 self._json(200, {"status": "ok", "confirmation": record, "state": snapshot()})
             return
+        if path == "/api/revoke":
+            with RUN_LOCK:
+                try:
+                    store = Store(DATA_DIR, LEDGER_PATH)
+                    draft = store.revoke_draft(str(body.get("draft_id") or ""), note=str(body.get("note") or ""))
+                except ValueError as exc:
+                    self._json(400, {"status": "error", "error": str(exc)})
+                    return
+                self._json(200, {"status": "ok", "draft": draft, "state": snapshot()})
+            return
         if path == "/api/custom":
             with RUN_LOCK:
                 try:

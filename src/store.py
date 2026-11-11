@@ -182,7 +182,7 @@ class Store:
             if draft["date"] == date
             and draft.get("channel", self.default_channel()) == name
             and draft["material_id"] != exclude_material
-            and draft.get("status") != "draft_rejected"  # 被否决的草稿已作废，不该继续占位
+            and draft.get("status") not in ("draft_rejected", "draft_revoked")  # 作废/撤回的草稿不该继续占位
         ]
 
     def upsert_draft(self, record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
@@ -207,6 +207,8 @@ class Store:
             existing["date_changed"] = record["date_changed"]
             existing["updated_at"] = record["updated_at"]
             existing["submit_count"] = existing.get("submit_count", 1) + 1
+            for stale in ("revoked_by", "revoked_at", "revoke_note"):  # 重新起草就把撤回痕迹清掉
+                existing.pop(stale, None)
             self.commit()
             return existing, False
 
@@ -254,6 +256,22 @@ class Store:
                     draft["status"] = "draft_rejected"
             self.commit()
             return record
+
+    def revoke_draft(self, draft_id: str, actor: str = "human", note: str = "") -> dict[str, Any]:
+        """人工撤回一份草稿：它不再占位，也不再算待发布；同样只有人能调用。"""
+        with self.transaction():
+            found = next((draft for draft in self.drafts.values() if draft.get("draft_id") == draft_id), None)
+            if found is None:
+                raise ValueError(f"没有草稿 {draft_id}")
+            if found.get("status") == "draft_revoked":
+                return found
+            found["status"] = "draft_revoked"
+            found["revoked_by"] = actor
+            found["revoked_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            if note:
+                found["revoke_note"] = note
+            self.commit()
+            return found
 
     def replan_confirmation(
         self,

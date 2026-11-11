@@ -130,8 +130,10 @@
   var DRAFT_STATE = {
     draft_ready: "已存草稿",
     draft_pending_confirmation: "待确认草稿",
-    draft_rejected: "已否决 · 作废"
+    draft_rejected: "已否决 · 作废",
+    draft_revoked: "已撤回 · 不再占位"
   };
+  var DRAFT_ACTIVE = { draft_ready: true, draft_pending_confirmation: true };
 
   function ledgerRows(root, items, render) {
     var list = el("ul", "ledger-list");
@@ -166,6 +168,14 @@
         li.appendChild(el("code", null, text(item.draft_id)));
         li.appendChild(el("span", null, text(item.material_id) + " · " + when(item.date || item.scheduled_date, item.scheduled_time)));
         li.appendChild(el("em", null, (DRAFT_STATE[item.status] || text(item.status)) + (item.submit_count > 1 ? " · 提交 " + item.submit_count + " 次" : "")));
+        if (DRAFT_ACTIVE[item.status]) {
+          var actions = el("div", "ledger-actions");
+          var undo = el("button", "confirm-btn revoke", "撤回这份草稿");
+          undo.type = "button";
+          undo.addEventListener("click", function () { revokeDraft(item.draft_id, undo); });
+          actions.appendChild(undo);
+          li.appendChild(actions);
+        }
       });
     }
     if (confirmations.length) {
@@ -178,6 +188,28 @@
       });
     }
   }
+  function revokeDraft(draftId, btn) {
+    var idle = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "撤回中…";
+    fetchJSON("/api/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ draft_id: draftId })
+    }).then(function (payload) {
+      state = payload.state;
+      renderMeta(state);
+      renderLedger(state);
+      renderTimeline(state, null);
+      $("results").classList.add("stale");
+      $("run-hint").textContent = "已撤回 " + draftId + "：时段已释放，重新运行会按新状态重排。";
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = idle;
+      showError(err.message || String(err));
+    });
+  }
+
   function renderMeta(data) {
     var dates = (data.dates && data.dates.length) ? data.dates : [data.date];
     $("meta-date").textContent = dates.length > 1

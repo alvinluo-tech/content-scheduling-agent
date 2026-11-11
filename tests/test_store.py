@@ -26,6 +26,42 @@ def _draft_record(material_id: str, scheduled_time: str) -> dict[str, Any]:
     }
 
 
+class DraftRevokeTest(unittest.TestCase):
+    """已存草稿也要能被撤回：撤回后不再占位，未知 id 直接报错。"""
+
+    def setUp(self) -> None:
+        self._ctx = temp_ledger()
+        self.ledger: Path = self._ctx.__enter__()
+        self.store = Store(DATA_DIR, self.ledger)
+        self.store.upsert_draft(_draft_record("M01", "19:00"))
+
+    def tearDown(self) -> None:
+        self._ctx.__exit__(None, None, None)
+
+    def test_revoke_frees_the_slot_and_is_idempotent(self) -> None:
+        self.assertEqual([slot["time"] for slot in self.store.drafted_slots("2026-11-12", channel="main")], ["19:00"])
+        revoked = self.store.revoke_draft("D-M01-2026-11-12-1800")
+        self.assertEqual(revoked["status"], "draft_revoked")
+        self.assertEqual(revoked["revoked_by"], "human")
+        self.assertTrue(revoked["revoked_at"])
+        self.assertEqual(self.store.drafted_slots("2026-11-12", channel="main"), [])
+        self.assertEqual(self.store.revoke_draft("D-M01-2026-11-12-1800")["status"], "draft_revoked")
+
+    def test_a_recreated_draft_does_not_keep_the_revoke_marks(self) -> None:
+        self.store.revoke_draft("D-M01-2026-11-12-1800")
+        record, created = self.store.upsert_draft(_draft_record("M01", "19:00"))
+        self.assertFalse(created)
+        self.assertEqual(record["status"], "draft_ready")
+        self.assertEqual(record["submit_count"], 2)
+        self.assertNotIn("revoked_at", record)
+        self.assertEqual([slot["time"] for slot in self.store.drafted_slots("2026-11-12", channel="main")], ["19:00"])
+
+    def test_unknown_draft_is_refused(self) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            self.store.revoke_draft("D-M99-2026-11-12-1800")
+        self.assertIn("没有草稿", str(ctx.exception))
+
+
 class LedgerConcurrencyTest(unittest.TestCase):
     """账本是"读-改-写"：两个进程各持一份内存快照时，后来的写不能把前一个的写入抹掉。"""
 
