@@ -127,6 +127,57 @@
   }
 
   /* ---------- static chrome ---------- */
+  var DRAFT_STATE = {
+    draft_ready: "已存草稿",
+    draft_pending_confirmation: "待确认草稿",
+    draft_rejected: "已否决 · 作废"
+  };
+
+  function ledgerRows(root, items, render) {
+    var list = el("ul", "ledger-list");
+    items.forEach(function (item) {
+      var li = el("li", "ledger-row");
+      render(li, item);
+      list.appendChild(li);
+    });
+    root.appendChild(list);
+  }
+
+  function renderLedger(data) {
+    var body = $("ledger-body");
+    if (!body) { return; }
+    clear(body);
+    var drafts = [];
+    var confirmations = [];
+    var key;
+    for (key in (data.drafts || {})) {
+      if (Object.prototype.hasOwnProperty.call(data.drafts, key)) { drafts.push(data.drafts[key]); }
+    }
+    for (key in (data.confirmations || {})) {
+      if (Object.prototype.hasOwnProperty.call(data.confirmations, key)) { confirmations.push(data.confirmations[key]); }
+    }
+    if (!drafts.length && !confirmations.length) {
+      body.appendChild(el("p", "fine", "账本还是空的：跑一个场景就会写进草稿，需要拍板时再多一条确认项。"));
+      return;
+    }
+    if (drafts.length) {
+      body.appendChild(el("p", "ledger-head", "草稿 " + drafts.length));
+      ledgerRows(body, drafts, function (li, item) {
+        li.appendChild(el("code", null, text(item.draft_id)));
+        li.appendChild(el("span", null, text(item.material_id) + " · " + when(item.date || item.scheduled_date, item.scheduled_time)));
+        li.appendChild(el("em", null, (DRAFT_STATE[item.status] || text(item.status)) + (item.submit_count > 1 ? " · 提交 " + item.submit_count + " 次" : "")));
+      });
+    }
+    if (confirmations.length) {
+      body.appendChild(el("p", "ledger-head", "确认项 " + confirmations.length));
+      ledgerRows(body, confirmations, function (li, item) {
+        li.appendChild(el("code", null, text(item.confirmation_id)));
+        li.appendChild(el("span", null, text(item.material_id) + " · " + when(item.proposed_date || item.date, item.proposed_time)));
+        var decided = item.approved_by || item.rejected_by || item.decided_by;
+        li.appendChild(el("em", null, (CONFIRM_STATUS[item.status] || text(item.status)) + (decided ? " · " + text(decided) : "")));
+      });
+    }
+  }
   function renderMeta(data) {
     var dates = (data.dates && data.dates.length) ? data.dates : [data.date];
     $("meta-date").textContent = dates.length > 1
@@ -134,6 +185,7 @@
       : text(data.date);
     $("meta-channel").textContent = data.channel === "main" ? "主频道" : text(data.channel);
     $("meta-ledger").textContent = text(data.ledger);
+    renderLedger(data);
   }
 
   function renderEnv(offline) {

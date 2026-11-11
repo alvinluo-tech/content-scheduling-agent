@@ -85,6 +85,8 @@ class ServerTestCase(unittest.TestCase):
         self.assertIn("ArrowDown", js)
         self.assertIn("tabIndex", js)
         self.assertIn("withToken", js)
+        self.assertIn('id="ledger-panel"', html)
+        self.assertIn("renderLedger", js)
         _, css = self.get("/app.css")
         # .token-row 用 display:flex，会把 [hidden] 的默认 display:none 顶掉，必须显式写一条
         self.assertIn(".token-row[hidden]", css.decode("utf-8"))
@@ -271,6 +273,17 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(after["draft"]["draft_id"], "D-M01-2026-11-12-1800")
         self.assertIn(confirmation_id, after["rejected_confirmations"])
         self.assertFalse(report["published"])
+
+    def test_state_carries_the_ledger_the_page_shows(self) -> None:
+        self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
+        _, raw = self.get("/api/state")
+        state = json.loads(raw.decode())["state"]
+        drafts = list(state["drafts"].values())
+        self.assertEqual(len(drafts), 1)
+        self.assertEqual(drafts[0]["draft_id"], "D-M01-2026-11-12-1800")
+        self.assertEqual(drafts[0]["status"], "draft_pending_confirmation")
+        confirmations = list(state["confirmations"].values())
+        self.assertEqual([c["status"] for c in confirmations], ["pending"])
 
     def test_exported_markdown_tells_the_human_how_to_decide(self) -> None:
         status, _ = self.post("/api/run", {"case": "02-conflict", "offline": True, "reset": True})
