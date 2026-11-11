@@ -59,7 +59,7 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-二十一张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+二十二张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |
@@ -82,6 +82,7 @@
 | `docs/images/web-10-contention.png` | 两条请求抢同一时段 | M01「已存草稿」13:00、M02「待确认」13:30 并带确认项 `C-M02-2026-11-12-1330`；时段带 13:00 与 13:30 两个草稿占位（`D-M01-2026-11-12-1300`、`D-M02-2026-11-12-1300`），没有一条被重复占用；`已发布 false` |
 | `docs/images/web-dedup-ledger.png` | 重复提交（先 02 后 05，不清账本） | 账本面板仍只有 1 份草稿 `D-M01-2026-11-12-1800`，状态写「待确认草稿 · 提交 2 次」；结论「待用户确认」；第 5 步 `save_draft` 观察写「draft_pending_confirmation（重复提交，已去重）」、`published=False` |
 | `docs/images/web-ledger.png` | 账本面板（02 跑完） | 左栏「账本 草稿与确认项」：草稿 1 条 `D-M01-2026-11-12-1800`（M01 · 2026-11-12 19:00 · 待确认草稿）、确认项 1 条 `C-M01-2026-11-12-1900`（待拍板）；内容直接来自 `GET /api/state` 的 `drafts` / `confirmations`，不是渲染时的推断 |
+| `docs/images/web-revoke.png` | 人撤回一份已存草稿 | 01 跑完后账本面板里草稿带「撤回这份草稿」按钮；点完变成「已撤回 · 不再占位」，底部提示「时段已释放，重新运行会按新状态重排」——撤回只释放占位，报告仍是上一轮的记录 |
 | `docs/images/web-09-channel.png` | 短视频频道 | 频道标签「主频道 / 短视频频道」（激活后者）、hint 写「短视频频道 · 2026-11-12」；M02 与 M06 都带「短视频频道」chip；明细 12:00 已有排期 M00 / 12:30 与 13:00 草稿占位（id 带 `-shorts`）/ 18:00 M05；切回主频道后 12:00、13:00 是空的（同一时刻不串道） |
 | `docs/images/web-08-day-overflow.png` | 当天排满 · 顺延次日 | 11-14 标签页激活、整日都是「已有排期」；M01 行写「要求 2026-11-14 18:00 · 硬性 / 建议 2026-11-15 09:30 / 已改时段 / 已改日期」；确认项问题是「当天更晚的时段已排满，是否同意顺延到 2026-11-15 09:30？」；步骤 3 的观察摘要写明「顺延到 2026-11-15 09:30」 |
 
@@ -100,6 +101,9 @@
    `--replan C-...=20:30` / `POST /api/reject` 带 `time` 则是"否决这一版、改到人挑的时段"，
    模型重跑只能落在那个人挑的时段（`test_human_can_replan_to_another_slot_instead_of_accepting`、
    `test_after_a_human_replan_the_model_moves_to_the_picked_slot`）。
+   `--revoke D-...` / `POST /api/revoke` 针对已存草稿：作废那份草稿并释放时段
+   （`test_revoke_frees_the_slot_and_is_idempotent`、`test_human_can_revoke_a_ready_draft_and_free_the_slot`），
+   重新起草会清掉撤回痕迹、`submit_count` 加一。
    仍是单人本地演示，没有账号、没有双人复核与审批留痕。
 6. **步数上限是硬截断**：达到上限的素材保持 `unresolved`/`not_processed`，不做部分保存的补偿逻辑。
 7. **顺延只到"后面配置过的日期"**：`next_available` 不会凭空造日期，也不考虑跨日的节假日/流量策略；
@@ -109,7 +113,9 @@
 9. **口令是共享密钥，不是账号体系**：`--token` 只回答"你有没有口令"，没有用户身份、没有按人分权、
    没有审计日志；口令错了就是 401，没有失败次数限制与过期时间。它挡住的是"本机随手一敲就能清账本"，
    不是"对外网暴露一个写接口"。
-10. **账本并发只做到单文件互斥**：`Store.transaction()` 用 `<ledger>.json.lock` 把"读-改-写"整体互斥，
+10. **撤回是「释放占位」，不是「永久否决」**：`--revoke` 只改那份草稿的状态，模型下次查同一时段会看到它空出来；
+    它不像 `--reject` 那样挡住同一方案再存一遍，也没有「为什么撤」的结构化字段（只有可选 `note`）。
+11. **账本并发只做到单文件互斥**：`Store.transaction()` 用 `<ledger>.json.lock` 把"读-改-写"整体互斥，
    实测两个并发 CLI 运行不会丢草稿、也不会把同一时段排进两条素材；但它不是数据库事务——没有多副本、
    没有行级并发，锁粒度是整个账本，写入频繁时会让后到者排队甚至等到 `LEDGER_BUSY`。
 

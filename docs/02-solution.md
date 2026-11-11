@@ -66,6 +66,11 @@
 所以「谁在什么时候批准了哪一版」不用去翻账本、更不用问模型——Markdown 报告与界面的「确认项」读的是同一份数据。
 字段名沿用 `pending_confirmations` 是历史包袱（它装的其实是该请求的全部确认项），改名的收益不如保持旧产物可读。
 
+撤回是这套记录里的第四种结局：`draft_revoked` / `revoked_by` / `revoked_at`。它针对**已经存下来的草稿**（含 `draft_ready`），
+而不是「还没同意的方案」——所以 `--revoke D-...` 不经过确认项，直接让那份草稿不再占位、时段释放给别人。
+重跑同一请求会重新起草，`submit_count` 加一，撤回痕迹被清掉。`draft_rejected` 由否决/改选触发，两者都不占位，
+但语义不同：否决是「不要这个方案」，撤回是「先撤下来」。
+
 ## 步数上限
 `agent` 节点入口先判 `steps >= max_steps`，达到上限直接返回 `terminal=step_limit_reached` 且**不再调用模型**。
 上限优先级：`--max-steps` > 输入 `options.max_steps` > 环境变量 `MAX_STEPS` > 20。

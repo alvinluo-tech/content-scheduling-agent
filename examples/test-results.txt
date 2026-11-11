@@ -49,6 +49,7 @@ test_custom_request_runs_through_the_same_pipeline (tests.test_server.ServerTest
 test_exported_markdown_tells_the_human_how_to_decide (tests.test_server.ServerTestCase.test_exported_markdown_tells_the_human_how_to_decide) ... ok
 test_human_approval_turns_pending_draft_into_ready (tests.test_server.ServerTestCase.test_human_approval_turns_pending_draft_into_ready) ... ok
 test_human_can_replan_to_another_slot_instead_of_accepting (tests.test_server.ServerTestCase.test_human_can_replan_to_another_slot_instead_of_accepting) ... ok
+test_human_can_revoke_a_ready_draft_and_free_the_slot (tests.test_server.ServerTestCase.test_human_can_revoke_a_ready_draft_and_free_the_slot) ... ok
 test_human_rejection_voids_the_draft_and_stops_the_same_plan (tests.test_server.ServerTestCase.test_human_rejection_voids_the_draft_and_stops_the_same_plan) ... ok
 test_index_is_served (tests.test_server.ServerTestCase.test_index_is_served) ... ok
 test_index_keeps_the_keyboard_and_screen_reader_hooks (tests.test_server.ServerTestCase.test_index_keeps_the_keyboard_and_screen_reader_hooks) ... ok
@@ -57,6 +58,7 @@ test_path_traversal_is_refused (tests.test_server.ServerTestCase.test_path_trave
 test_repeated_submission_keeps_one_draft (tests.test_server.ServerTestCase.test_repeated_submission_keeps_one_draft) ... ok
 test_report_never_claims_publication (tests.test_server.ServerTestCase.test_report_never_claims_publication) ... ok
 test_reset_clears_ledger (tests.test_server.ServerTestCase.test_reset_clears_ledger) ... ok
+test_revoking_an_unknown_draft_is_refused (tests.test_server.ServerTestCase.test_revoking_an_unknown_draft_is_refused) ... ok
 test_run_conflict_case_saves_draft_without_publishing (tests.test_server.ServerTestCase.test_run_conflict_case_saves_draft_without_publishing) ... ok
 test_state_carries_the_ledger_the_page_shows (tests.test_server.ServerTestCase.test_state_carries_the_ledger_the_page_shows) ... ok
 test_state_endpoint_describes_the_workbench (tests.test_server.ServerTestCase.test_state_endpoint_describes_the_workbench) ... ok
@@ -69,6 +71,9 @@ test_unknown_case_is_rejected (tests.test_server.ServerTestCase.test_unknown_cas
 test_unknown_confirmation_is_rejected (tests.test_server.ServerTestCase.test_unknown_confirmation_is_rejected) ... ok
 test_a_wrong_token_is_refused_everywhere (tests.test_server.TokenServerTestCase.test_a_wrong_token_is_refused_everywhere) ... ok
 test_api_needs_the_token_while_the_page_still_opens (tests.test_server.TokenServerTestCase.test_api_needs_the_token_while_the_page_still_opens) ... ok
+test_a_recreated_draft_does_not_keep_the_revoke_marks (tests.test_store.DraftRevokeTest.test_a_recreated_draft_does_not_keep_the_revoke_marks) ... ok
+test_revoke_frees_the_slot_and_is_idempotent (tests.test_store.DraftRevokeTest.test_revoke_frees_the_slot_and_is_idempotent) ... ok
+test_unknown_draft_is_refused (tests.test_store.DraftRevokeTest.test_unknown_draft_is_refused) ... ok
 test_a_confirmation_written_elsewhere_is_not_lost_by_a_later_draft (tests.test_store.LedgerConcurrencyTest.test_a_confirmation_written_elsewhere_is_not_lost_by_a_later_draft) ... ok
 test_two_instances_do_not_overwrite_each_others_drafts (tests.test_store.LedgerConcurrencyTest.test_two_instances_do_not_overwrite_each_others_drafts) ... ok
 test_waiting_on_a_held_lock_gives_up_loudly_instead_of_writing (tests.test_store.LedgerConcurrencyTest.test_waiting_on_a_held_lock_gives_up_loudly_instead_of_writing) ... ok
@@ -103,6 +108,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 96 tests in 7.962s
+Ran 101 tests in 9.208s
 
 OK
