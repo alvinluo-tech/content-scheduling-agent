@@ -7,14 +7,14 @@
 .venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 10 个用例
 ```
 
-原始输出见 `examples/test-results.txt`（104 个用例）。测试分三层：
+原始输出见 `examples/test-results.txt`（105 个用例）。测试分三层：
 
 | 层 | 文件 | 覆盖 |
 | --- | --- | --- |
 | 规则层 | `tests/test_policy.py` | R01-R05 的四种审核结论、时段网格、冲突与替代时段、替代时段的排序（近优先、间隔惩罚、偏好档加分） |
 | 工具层 | `tests/test_tools.py` | 硬性时间护栏、审核未过护栏、重复提交去重、自有草稿不冲突、他人草稿占位、保存失败、参数校验、素材不存在、越界读取、未注册工具、替代时段的推荐理由随工具结果返回 |
 | 图级 | `tests/test_agent_flow.py` | 10 个用例端到端、多日冲突只在自己那一天待确认、频道冲突只在自己那一个频道待确认、两条请求抢同一时段时不双订、步数上限（含 CLI 覆盖）、trace 结构、无发布工具 |
-| 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件、有 pending 时给出可复制的 `--approve` / `--replan` 命令而无 pending 时不给（自定义请求退回界面按钮文案） |
+| 报告层 | `tests/test_markdown.py` | 每条素材写出「下一步」（补哪个字段 / 命中哪条 blocking / 保存失败要重试）、02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件、有 pending 时给出可复制的 `--approve` / `--replan` 命令而无 pending 时不给（自定义请求退回界面按钮文案） |
 | 输入层 | `tests/test_validation.py` | 6 个示例输入全部通过、同一素材重复出现时点名两条位置、缺 `requested_time` 时说明「不会替用户猜」、越界时间与未配置的日期/频道**不**在入口拦（留给工具）、`max_steps` 非正数被拒 |
 | 账本层 | `tests/test_store.py` | 两个实例各自写不互相覆盖（旧实现会从 2 份掉到 1 份）、别处写的确认项不被后来的草稿覆盖、锁被占用时等满超时报 `LedgerBusy` 且释放后照常可用 |
 | 自查层 | `scripts/verify_submission.py` + `tests/test_verify_script.py` | 11 条断言逐条读报告字段对齐题面验收点；篡改报告（谎报 `published`、保存失败却留草稿）时自查必须变红 |
@@ -84,6 +84,7 @@
 | --- | --- | --- |
 | `docs/images/web-02-conflict.png` | 时段冲突 | 结论「待用户确认」；M01 待确认 + 确认项 `C-M01-…-1900`；时段带 19:00 标红为建议；`已发布 false` |
 | `docs/images/web-03-rules.png` | 信息缺失 + 规则风险 | M03「信息缺失」、M04「已阻断」；风险行带 `R03`/`R05` 而非 `[object Object]`；草稿均「未落库」 |
+| `docs/images/web-next-action.png` | 每条素材带上「下一步」 | M03「下一步：补齐缺失字段后重跑：duration_sec、authorized」、M04「下一步：按风险原因修改素材后重跑（R03）」——由 `result_status` 推导，不是模型自述 |
 | `docs/images/web-04-save-failure.png` | 保存失败 | 结论「存在失败项」；M05「保存失败」、草稿「未保存（失败 2 次）」；trace 末两步 `FAIL` |
 | `docs/images/web-06-step-limit.png` | 步数上限 | 结论「步数上限中断」；`步数 3/3`；M02「未完成」、M05「未处理」，模型自述写明未收尾 |
 | `docs/images/web-02-conflict-live.png` | 02 走真实模型 | 右上角切到「真实模型」；`步数 5/20`、`工具 5`；决策依据栏是模型自己写的理由，结论同为「待用户确认」，`已发布 false` |
