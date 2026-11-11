@@ -39,6 +39,10 @@ test_ranked_alternatives_prefer_the_closest_free_slot (tests.test_policy.PolicyT
 test_ranking_without_an_anchor_starts_at_the_day_opening (tests.test_policy.PolicyTest.test_ranking_without_an_anchor_starts_at_the_day_opening) ... ok
 test_slot_grid_matches_operating_hours (tests.test_policy.PolicyTest.test_slot_grid_matches_operating_hours) ... ok
 test_warning_does_not_block_drafting (tests.test_policy.PolicyTest.test_warning_does_not_block_drafting) ... ok
+test_case_menu_matches_the_examples_on_disk (tests.test_repo_docs.RepoDocsTest.test_case_menu_matches_the_examples_on_disk) ... ok
+test_every_example_ships_input_output_trace_and_report (tests.test_repo_docs.RepoDocsTest.test_every_example_ships_input_output_trace_and_report) ... ok
+test_every_referenced_screenshot_exists (tests.test_repo_docs.RepoDocsTest.test_every_referenced_screenshot_exists) ... ok
+test_no_screenshot_sits_unreferenced (tests.test_repo_docs.RepoDocsTest.test_no_screenshot_sits_unreferenced) ... ok
 test_broken_json_is_rejected (tests.test_server.ServerTestCase.test_broken_json_is_rejected) ... ok
 test_custom_request_is_validated_like_the_cli (tests.test_server.ServerTestCase.test_custom_request_is_validated_like_the_cli) ... ok
 test_custom_request_runs_through_the_same_pipeline (tests.test_server.ServerTestCase.test_custom_request_runs_through_the_same_pipeline) ... ok
@@ -99,6 +103,6 @@ test_example_inputs_pass (tests.test_validation.ValidationTest.test_example_inpu
 test_missing_time_says_it_will_not_guess (tests.test_validation.ValidationTest.test_missing_time_says_it_will_not_guess) ... ok
 
 ----------------------------------------------------------------------
-Ran 92 tests in 7.959s
+Ran 96 tests in 7.962s
 
 OK
