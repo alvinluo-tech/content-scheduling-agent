@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>排期台 · 封面</title>
+<style>
+  :root{
+    --paper:#f7f4ec; --ink:#26221b; --ink-2:#5b5346; --ink-3:#8a8172;
+    --accent:#a4382a; --rule:#d8d1c2;
+    --serif:"Songti SC","Noto Serif SC","Source Han Serif SC",Georgia,serif;
+    --mono:"JetBrains Mono","Cascadia Mono",ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1280px;height:640px;overflow:hidden}
+  body{background:var(--paper);color:var(--ink);font-family:var(--serif);
+       padding:52px 64px 0;position:relative}
+  body::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 100% 0%,rgba(164,56,42,.06),transparent 60%)}
+  .head{width:700px}
+  .shot{position:absolute;right:56px;top:96px;width:508px}
+  .shot img{display:block;width:100%;border:1px solid var(--rule);border-radius:3px;
+    box-shadow:0 10px 30px rgba(38,34,27,.10)}
+  .shot figcaption{margin-top:11px;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);letter-spacing:.02em}
+  .eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:var(--ink-3)}
+  h1{font-size:96px;line-height:1;letter-spacing:.02em;margin:26px 0 14px}
+  h1 em{font-style:normal;color:var(--accent)}
+  .sub{font-size:27px;color:var(--ink-2);letter-spacing:.01em}
+  .flow{margin-top:30px;font-family:var(--mono);font-size:15px;color:var(--ink-2)}
+  .flow b{color:var(--accent);font-weight:400}
+  .facts{display:flex;gap:30px;width:700px;margin-top:24px;padding-top:16px;border-top:1px solid var(--rule)}
+  .fact dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:var(--ink-3);margin-bottom:7px}
+  .fact dd{font-size:18px;color:var(--ink)}
+  .fact dd small{display:block;font-size:11.5px;color:var(--ink-3);margin:4px 0 0}
+  .strip{position:absolute;left:64px;right:64px;bottom:46px;height:26px;display:flex;gap:4px}
+  .strip i{flex:1;background:#e7e1d4;border-radius:1px}
+  .strip i.occ{background:var(--accent)}
+  .strip i.draft{background:var(--accent);opacity:.34}
+  .strip i.hint{background:repeating-linear-gradient(135deg,#c9b9a8 0 3px,#eee7d9 3px 7px)}
+  .legend{position:absolute;left:56px;bottom:74px;font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.03em}
+  .legend span{display:inline-block;width:9px;height:9px;margin:0 5px 0 16px;vertical-align:-1px;background:#e7e1d4}
+  .legend span:first-child{margin-left:0}
+  .legend .a{background:var(--accent)}
+  .legend .b{background:var(--accent);opacity:.34}
+  .legend .c{background:repeating-linear-gradient(135deg,#c9b9a8 0 3px,#eee7d9 3px 7px)}
+  .url{position:absolute;right:56px;bottom:12px;font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+  <div class="head">
+  <p class="eyebrow">小影校招笔试 · 项目题 1 · 素材审核与发布排期</p>
+  <h1>排期台<em>.</em></h1>
+  <p class="sub">素材审核与发布排期 Agent ｜ 模型决策，代码守底线</p>
+  <p class="flow">读素材 <b>→</b> 查规则 <b>→</b> 找时段 <b>→</b> 请人拍板 <b>→</b> 只写草稿</p>
+</div>
+  <figure class="shot"><img src="web-02-conflict.png" alt="界面：时段冲突"><figcaption>02 时段占用 · 18:00 被占 → 建议 19:00 · 待用户确认</figcaption></figure>
+  <dl class="facts">
+    <div class="fact"><dt>用例</dt><dd>10<small>条执行路径</small></dd></div>
+    <div class="fact"><dt>测试</dt><dd>105<small>个 unittest</small></dd></div>
+    <div class="fact"><dt>验收自查</dt><dd>12 / 12<small>可执行断言</small></dd></div>
+    <div class="fact"><dt>发布</dt><dd>published = false<small>结构上不可能越权</small></dd></div>
+  </dl>
+  <div class="strip" style="left:56px;right:56px;bottom:104px;height:24px">
+    <i></i><i></i><i></i><i class="occ"></i><i></i><i></i><i class="hint"></i><i></i><i class="draft"></i>
+    <i></i><i></i><i></i><i class="occ"></i><i></i><i></i><i class="draft"></i><i></i><i></i>
+    <i class="occ"></i><i></i><i></i><i></i><i class="hint"></i><i></i><i></i><i></i>
+    <i></i><i class="occ"></i><i></i><i></i><i></i><i class="draft"></i><i></i><i></i>
+  </div>
+  <p class="legend"><span class="a"></span>已有排期<span class="c"></span>建议时段<span class="b"></span>草稿占位<span></span>空闲</p>
+  <p class="url">github.com/alvinluo-tech/content-scheduling-agent</p>
+</body>
+</html>

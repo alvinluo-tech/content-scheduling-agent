@@ -3,7 +3,7 @@
 ## 测试预期与实际结果
 
 ```
-.venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # 40 passed
+.venv/Scripts/python.exe -m unittest discover -s tests -t . -v   # Ran 105 tests ... OK
 .venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 10 个用例
 ```
 
@@ -78,7 +78,9 @@
 实时推送同样有接口级断言：`test_stream_pushes_steps_before_the_final_report` 读真 SSE 流，确认 `meta` 先行、
 中间至少 3 条 `trace` 快照（第一条只含 1 步、末条步号已推进）、最后一条是 `report` 且 `published=False`；
 `test_stream_rejects_unknown_case_before_opening_stream` 保证非法场景在开流之前就 400。
-二十二张截图是同一界面在不同场景下的实际渲染，页面上的数字全部来自那份 `report`：
+二十四张截图是同一界面在不同场景下的实际渲染（含 `cover.png` 封面），页面上的数字全部来自那份 `report`：
+
+| `docs/images/cover.png` | README 封面（由 `docs/images/cover.html` 渲染） | 标题、10 条执行路径 / 105 个测试 / 12 条断言、`published = false`，右侧为 02 场景实拍 |
 
 | 截图 | 场景 | 页面上应看到的 |
 | --- | --- | --- |

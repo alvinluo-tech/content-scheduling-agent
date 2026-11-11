@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 470" width="1240" height="470" role="img" aria-label="排期台一次运行的完整链路">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a8172"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a4382a"/>
+    </marker>
+    <style>
+      .paper { fill: #f7f4ec; }
+      .box { fill: #fffdf8; stroke: #d8d1c2; stroke-width: 1.2; }
+      .box-strong { fill: #fffdf8; stroke: #a4382a; stroke-width: 1.4; }
+      .t { font-family: 'Songti SC','Noto Serif SC',Georgia,serif; fill: #26221b; }
+      .h { font-family: 'Songti SC','Noto Serif SC',Georgia,serif; font-size: 15px; font-weight: 600; fill: #26221b; }
+      .s { font-family: 'JetBrains Mono','Cascadia Mono',Consolas,monospace; font-size: 10.5px; fill: #8a8172; }
+      .m { font-family: 'JetBrains Mono','Cascadia Mono',Consolas,monospace; font-size: 11px; fill: #5b5346; }
+      .red { fill: #a4382a; }
+      .note { font-family: 'Songti SC','Noto Serif SC',Georgia,serif; font-size: 11.5px; fill: #5b5346; }
+    </style>
+  </defs>
+
+  <rect class="paper" x="0" y="0" width="1240" height="470"/>
+
+  <text class="t" x="36" y="34" font-size="15" font-weight="600" letter-spacing="0.06em">一次运行的完整链路</text>
+  <text class="s" x="1204" y="34" text-anchor="end">CLI 与 Web 共用 src/main.py:run_pipeline()</text>
+  <line x1="36" y1="48" x2="1204" y2="48" stroke="#d8d1c2" stroke-width="1"/>
+
+  <rect class="box" x="36" y="86" width="132" height="78" rx="2"/>
+  <text class="h" x="52" y="112">请求</text>
+  <text class="m" x="52" y="132">run.json</text>
+  <text class="s" x="52" y="150">素材 + 时间要求</text>
+
+  <path d="M 168 125 L 196 125" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="200" y="86" width="146" height="78" rx="2"/>
+  <text class="h" x="216" y="112">入口校验</text>
+  <text class="m" x="216" y="132">validation.py</text>
+  <text class="s" x="216" y="150">结构性错误 exit 2</text>
+
+  <path d="M 346 125 L 374 125" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect class="box-strong" x="378" y="60" width="352" height="132" rx="2"/>
+  <text class="s" x="394" y="80">src/graph.py · LangGraph StateGraph</text>
+  <rect class="box" x="394" y="90" width="140" height="58" rx="2"/>
+  <text class="h" x="410" y="114">agent 节点</text>
+  <text class="s" x="410" y="133">选下一个动作</text>
+  <rect class="box" x="574" y="90" width="140" height="58" rx="2"/>
+  <text class="h" x="590" y="114">tools 节点</text>
+  <text class="s" x="590" y="133">执行并回填观察</text>
+  <path d="M 536 104 L 572 104" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text class="s" x="542" y="99">行动</text>
+  <path d="M 572 136 L 536 136" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text class="s" x="542" y="152">观察</text>
+  <text class="s" x="394" y="178">步数上限默认 20，到达即返回未完成状态</text>
+
+  <path d="M 730 125 L 758 125" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="762" y="86" width="146" height="78" rx="2"/>
+  <text class="h" x="778" y="110">草稿账本</text>
+  <text class="m" x="778" y="130">store.py</text>
+  <text class="s" x="778" y="146">draft_key 去重</text>
+  <text class="s" x="778" y="158">文件锁串行写入</text>
+
+  <path d="M 908 125 L 936 125" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="940" y="86" width="140" height="78" rx="2"/>
+  <text class="h" x="956" y="110">报告</text>
+  <text class="m" x="956" y="130">report.py</text>
+  <text class="s" x="956" y="146">只从账本反查</text>
+
+  <path d="M 1080 125 L 1104 125" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="1108" y="86" width="96" height="78" rx="2"/>
+  <text class="s" x="1118" y="108">result.json</text>
+  <text class="s" x="1118" y="126">trace.json</text>
+  <text class="s" x="1118" y="144">report.md</text>
+
+  <path d="M 644 192 L 644 232" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="378" y="240" width="352" height="92" rx="2"/>
+  <text class="h" x="394" y="264">工具集 · 5 个，每个必填 reason</text>
+  <text class="m" x="394" y="286">read_material · check_rules · query_time_slot</text>
+  <text class="m" x="394" y="304">request_confirmation · save_draft</text>
+  <text class="s" x="394" y="322">工具集里没有「发布」这个动作</text>
+
+  <path d="M 730 306 L 786 306 L 786 170" fill="none" stroke="#8a8172" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text class="s" x="736" y="322">写入</text>
+
+  <rect class="box" x="940" y="240" width="180" height="92" rx="2"/>
+  <text class="h" x="956" y="264">人</text>
+  <text class="m" x="956" y="286">--approve / --reject</text>
+  <text class="m" x="956" y="304">--replan / --revoke</text>
+  <text class="s" x="956" y="322">界面按钮走同一组 API</text>
+
+  <path d="M 940 258 L 906 258 L 906 170" fill="none" stroke="#8a8172" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+  <text class="s" x="846" y="252">只写账本</text>
+
+  <path d="M 420 332 L 420 352" fill="none" stroke="#a4382a" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrowRed)"/>
+  <text class="note red" x="434" y="356">模型没有审批工具 —— 改硬性时间必须先有人在账本里点过头</text>
+
+  <line x1="36" y1="386" x2="1204" y2="386" stroke="#d8d1c2" stroke-width="1"/>
+  <text class="s" x="36" y="406">三条代码级红线</text>
+  <text class="note" x="36" y="426">① 工具集没有发布能力，报告里 published 恒为 false</text>
+  <text class="note" x="36" y="444">② 硬性时间的时间或日期被改动，必须先有 pending / approved 的确认项，否则 save_draft 返回 HARD_CONSTRAINT_VIOLATION</text>
+  <text class="note" x="36" y="462">③ 审核不通过（can_draft=false）时 save_draft 直接拒绝，并说明缺什么</text>
+</svg>
