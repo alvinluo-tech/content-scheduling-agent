@@ -24,9 +24,15 @@ uv venv .venv && uv pip install --python .venv/Scripts/python.exe -r requirement
 
 # 4. 跑测试
 .venv/Scripts/python.exe -m unittest discover -s tests -t . -v
+
+# 5. 一条命令按题面的验收点自查（11 条断言，输出与 examples/verify-results.txt 一致）
+.venv/Scripts/python.exe scripts/verify_submission.py
 ```
 
 macOS / Linux 把 `.venv/Scripts/python.exe` 换成 `.venv/bin/python` 即可。
+
+第 5 步是给评审的：它把题面的六个验收点（加多日/顺延/频道/竞争共 11 条）变成可执行断言，逐条读报告的
+结构化字段而不是任何一句自述，全通过才 `exit 0`。
 
 ## 接真实模型
 
@@ -139,10 +145,10 @@ CLI 对应 `--report-md`。两者都复用 `src/markdown.py` 的同一份渲染�
 ```
 src/        store / policy / tools / models / graph / trace / report / markdown / main / server（Web 演示用，标准库 http.server）
 data/       合成素材、审核规则、已有排期、草稿账本
-examples/   10 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt
+examples/   10 个用例的输入 + 实际输出 + trace + Markdown 报告（*.report.md）+ test-results.txt + verify-results.txt
 web/        index.html / app.css / app.js（可选演示界面，无构建步骤）
-tests/      101 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告与拍板命令、人工同意 / 否决 / 改选、HTTP 接口 / SSE 推送、键盘与读屏钩子、文档与证据文件自洽）
-scripts/    run_examples.py（一键重跑全部用例）
+tests/      104 个 unittest（规则、工具守卫、图级链路、trace 结构、多日排期、频道隔离、账本并发、替代时段排序、Markdown 报告与拍板命令、人工同意 / 否决 / 改选 / 撤回、HTTP 接口 / SSE 推送、键盘与读屏钩子、文档与证据文件自洽、验收自查脚本本身有牙）
+scripts/    run_examples.py（一键重跑全部用例）、verify_submission.py（按验收点自查，11 条断言）
 docs/       01-需求 / 02-方案 / 03-评估 / 04-AI 使用 / 05-复盘 + images/（界面截图）
 ```
 

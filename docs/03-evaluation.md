@@ -7,7 +7,7 @@
 .venv/Scripts/python.exe scripts/run_examples.py                 # 重跑 10 个用例
 ```
 
-原始输出见 `examples/test-results.txt`（91 个用例）。测试分三层：
+原始输出见 `examples/test-results.txt`（104 个用例）。测试分三层：
 
 | 层 | 文件 | 覆盖 |
 | --- | --- | --- |
@@ -17,7 +17,26 @@
 | 报告层 | `tests/test_markdown.py` | 02 的确认项与草稿 id 原样出现在 Markdown、任何用例都不得出现「已发布：是」、保存失败写成「未保存（失败 2 次，未谎报成功）」、步数上限列出未完成素材、CLI `--report-md` 真的写出文件、有 pending 时给出可复制的 `--approve` / `--replan` 命令而无 pending 时不给（自定义请求退回界面按钮文案） |
 | 输入层 | `tests/test_validation.py` | 6 个示例输入全部通过、同一素材重复出现时点名两条位置、缺 `requested_time` 时说明「不会替用户猜」、越界时间与未配置的日期/频道**不**在入口拦（留给工具）、`max_steps` 非正数被拒 |
 | 账本层 | `tests/test_store.py` | 两个实例各自写不互相覆盖（旧实现会从 2 份掉到 1 份）、别处写的确认项不被后来的草稿覆盖、锁被占用时等满超时报 `LedgerBusy` 且释放后照常可用 |
-| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、9 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、`/api/custom` 与 CLI 同一套校验（重复素材 400）、口令开启后无 token 一律 401（页面仍可打开）、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
+| 自查层 | `scripts/verify_submission.py` + `tests/test_verify_script.py` | 11 条断言逐条读报告字段对齐题面验收点；篡改报告（谎报 `published`、保存失败却留草稿）时自查必须变红 |
+| 接口层 | `tests/test_server.py` | `/api/state` 字段（含 `dates`/`days`/`channels`/`channel_days`）、10 个场景、静态文件与路径穿越、`/api/run` 跑通 02、非法场景与坏 JSON、`/api/reset` 清账本、02→05 只有一份草稿、四场景 `published` 恒 False、SSE 顺序、人工确认 / 否决 / 改选回写、`/api/custom` 与 CLI 同一套校验（重复素材 400）、口令开启后无 token 一律 401（页面仍可打开）、页面保留键盘/读屏钩子（`aria-live`、`meta-duration`、箭头键 tabindex） |
+
+## 一条命令按验收点自查
+
+`python scripts/verify_submission.py` 用同一份临时账本跑完全部 10 个用例，再按题面的验收点逐条读报告字段：
+
+| 断言 | 读的是哪个字段 |
+| --- | --- |
+| 任何情况下都不发布 | 每行 `published` 与 `draft.published` 都必须为 false |
+| 正常排期 | 01 的 `outcome=scheduled`、M02 `draft.status=draft_ready` |
+| 信息缺失 / 规则风险 | 03 的 M03 `missing_info` 且无草稿；M04 的 `risk_reasons` 含 R03、R05 |
+| 时段冲突 | 02 的 M01 换了时段、`requires_user_confirmation=true`、草稿 `draft_pending_confirmation` |
+| 重复提交 | 05 与 02 的 `draft_id` 相同、`submit_count>=2`、账本里同一请求只有 1 份 |
+| 保存失败 | 04 的 `result_status=save_failed`、无草稿、`failed_save_attempts>=2` |
+| 步数上限 | 06 的 `status=step_limit_reached`、`outcome=incomplete`、`unfinished_materials` 非空 |
+| 多日 / 顺延 / 频道 / 竞争 | 07 排到 11-13、08 顺延到 11-15 并待确认、09 只在 `shorts` 占位、10 不把同一时段排给两条素材 |
+
+输出存档在 `examples/verify-results.txt`（11/11 通过）。它不是新链路：跑的还是 `run_pipeline()`，
+只是把「评审要肉眼核对的那几张表」变成可执行的断言；篡改任一份报告，对应断言立刻变红（`tests/test_verify_script.py`）。
 
 ## 十个用例的实际结果（离线 Mock）
 
