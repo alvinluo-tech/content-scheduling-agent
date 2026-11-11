@@ -302,7 +302,7 @@ docs/            01 需求 / 02 方案 / 03 评估 / 04 AI 使用 / 05 复盘 + 
 | `docs/01-requirements.md` | 用户与问题、范围内外、成功标准 |
 | `docs/02-solution.md` | 链路、工具与护栏、为什么这样取舍、账本与锁 |
 | `docs/03-evaluation.md` | 三层测试、10 个用例实测、真实模型验证、24 张截图、失败与限制 |
-| `docs/04-ai-usage.md` | AI 用在哪些环节、人负责什么、AI 产出被改掉的地方 |
+| `docs/04-ai-usage.md` | AI 使用范围、个人贡献、AI 产出被改掉的 11 个问题、验证结果 |
 | `docs/05-retrospective.md` | 最难的三件事、学到的、下一步、实际用时与未完成部分 |
 | `examples/verify-results.txt` | 12 条验收断言的实际输出 |
 | `examples/test-results.txt` | 105 个测试的实际输出 |
