@@ -67,7 +67,8 @@
       "draft": null,
       "failed_save_attempts": 0,
       "published": false,
-      "result_status": "needs_info"
+      "result_status": "needs_info",
+      "next_action": "补齐缺失字段后重跑：duration_sec、authorized"
     },
     {
       "material_id": "M04",
@@ -103,7 +104,8 @@
       "draft": null,
       "failed_save_attempts": 0,
       "published": false,
-      "result_status": "blocked"
+      "result_status": "blocked",
+      "next_action": "按风险原因修改素材后重跑（R03）"
     }
   ],
   "unfinished_materials": [],

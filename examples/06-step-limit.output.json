@@ -75,7 +75,8 @@
       "draft": null,
       "failed_save_attempts": 0,
       "published": false,
-      "result_status": "unresolved"
+      "result_status": "unresolved",
+      "next_action": "步数上限中断；调高 --max-steps 后重跑"
     },
     {
       "material_id": "M05",
@@ -100,7 +101,8 @@
       "draft": null,
       "failed_save_attempts": 0,
       "published": false,
-      "result_status": "not_processed"
+      "result_status": "not_processed",
+      "next_action": "本次未处理；调高 --max-steps 或单独提交这条素材"
     }
   ],
   "unfinished_materials": [

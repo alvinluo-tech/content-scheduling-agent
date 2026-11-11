@@ -77,7 +77,8 @@
       },
       "failed_save_attempts": 0,
       "published": false,
-      "result_status": "scheduled_pending_confirmation"
+      "result_status": "scheduled_pending_confirmation",
+      "next_action": "等人确认 2026-11-15 09:30 这个替代时段；确认后重跑即落 draft_ready"
     }
   ],
   "unfinished_materials": [],

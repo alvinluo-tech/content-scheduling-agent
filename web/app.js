@@ -540,6 +540,7 @@
     if (m.date_changed) { facts.appendChild(el("span", null, "已改日期")); }
     if (m.time_hard && m.hard_time_preserved === false) { facts.appendChild(el("span", "flag", "硬性要求未满足")); }
     left.appendChild(facts);
+    if (m.next_action) { left.appendChild(el("p", "m-next", "下一步：" + m.next_action)); }
 
     var right = el("div", "m-decision");
 

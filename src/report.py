@@ -55,6 +55,33 @@ def _material_status(
     return "not_processed"
 
 
+NEXT_ACTION = {
+    "scheduled_draft": "无（草稿可直接进入人工发布流程）",
+    "needs_info": "补齐缺失字段后重跑",
+    "blocked": "按风险原因修改素材后重跑",
+    "save_failed": "保存接口失败；确认磁盘与权限后重跑（不会谎报成功）",
+    "material_not_found": "核对素材 ID 是否在素材库里",
+    "confirmation_rejected": "该改期已被否决；换一个时段或给出新的要求",
+    "draft_revoked": "草稿已被撤回；需要时重跑同一请求重新起草",
+    "unresolved": "步数上限中断；调高 --max-steps 后重跑",
+    "not_processed": "本次未处理；调高 --max-steps 或单独提交这条素材",
+}
+
+
+def _next_action(status: str, review: dict[str, Any], draft: dict[str, Any] | None) -> str:
+    """报告要能直接告诉人下一步做什么，而不是只给一个状态码。"""
+    if status == "scheduled_pending_confirmation" and draft is not None:
+        return "等人确认 " + str(draft["date"]) + " " + str(draft["scheduled_time"]) + " 这个替代时段；确认后重跑即落 draft_ready"
+    text = NEXT_ACTION.get(status, "")
+    if status == "needs_info" and review.get("missing_fields"):
+        text += "：" + "、".join(review["missing_fields"])
+    if status == "blocked":
+        rules = [v["rule_id"] for v in review.get("violations", []) if v.get("severity") == "blocking"]
+        if rules:
+            text += "（" + "、".join(rules) + "）"
+    return text
+
+
 def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: TraceRecorder, limits: dict[str, Any]) -> dict[str, Any]:
     date = store.schedule_date()
     default_channel = store.default_channel()
@@ -151,6 +178,7 @@ def build_report(run: dict[str, Any], store: Store, toolbox: Toolbox, trace: Tra
                 "failed_save_attempts": toolbox.attempts.get(material_id, 0),
                 "published": False,
                 "result_status": status,
+                "next_action": _next_action(status, review, draft),
             }
         )
 

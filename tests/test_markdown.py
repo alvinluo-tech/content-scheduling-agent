@@ -71,10 +71,18 @@ class MarkdownReportTest(unittest.TestCase):
             self.assertIn(step["action"]["tool"], text)
         self.assertIn("## 决策记录", text)
 
+    def test_each_material_says_what_the_human_should_do_next(self) -> None:
+        text = render_report(load("02-conflict", "output"), load("02-conflict", "trace"))
+        self.assertIn("下一步：等人确认 2026-11-12 19:00 这个替代时段", text)
+        rules = render_report(load("03-rules-and-missing", "output"), load("03-rules-and-missing", "trace"))
+        self.assertIn("下一步：补齐缺失字段后重跑：duration_sec、authorized", rules)
+        self.assertIn("下一步：按风险原因修改素材后重跑（R03）", rules)
+
     def test_save_failure_is_reported_as_not_saved(self) -> None:
         text = render_report(load("04-save-failure", "output"), load("04-save-failure", "trace"))
         self.assertIn("保存失败", text)
         self.assertIn("未保存（失败 2 次，未谎报成功）", text)
+        self.assertIn("下一步：保存接口失败；确认磁盘与权限后重跑", text)
         self.assertNotIn("draft_ready", text)
 
     def test_step_limit_report_lists_unfinished_materials(self) -> None:
@@ -82,6 +90,7 @@ class MarkdownReportTest(unittest.TestCase):
         self.assertIn("步数上限中断", text)
         self.assertIn("步数：3 / 3", text)
         self.assertIn("⚠️ 未完成素材：M02、M05", text)
+        self.assertIn("下一步：步数上限中断；调高 --max-steps 后重跑", text)
 
     def test_cli_writes_markdown_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

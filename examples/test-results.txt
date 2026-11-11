@@ -26,6 +26,7 @@ test_a_custom_run_without_an_input_file_points_at_the_buttons (tests.test_markdo
 test_cli_writes_markdown_file (tests.test_markdown.MarkdownReportTest.test_cli_writes_markdown_file) ... ok
 test_conflict_report_keeps_confirmation_and_never_claims_publish (tests.test_markdown.MarkdownReportTest.test_conflict_report_keeps_confirmation_and_never_claims_publish) ... ok
 test_decision_table_lists_every_tool_call (tests.test_markdown.MarkdownReportTest.test_decision_table_lists_every_tool_call) ... ok
+test_each_material_says_what_the_human_should_do_next (tests.test_markdown.MarkdownReportTest.test_each_material_says_what_the_human_should_do_next) ... ok
 test_human_decision_shows_who_when_and_which_version (tests.test_markdown.MarkdownReportTest.test_human_decision_shows_who_when_and_which_version) ... ok
 test_pending_items_come_with_commands_a_human_can_paste (tests.test_markdown.MarkdownReportTest.test_pending_items_come_with_commands_a_human_can_paste) ... ok
 test_save_failure_is_reported_as_not_saved (tests.test_markdown.MarkdownReportTest.test_save_failure_is_reported_as_not_saved) ... ok
@@ -111,6 +112,6 @@ test_a_draft_after_a_save_failure_is_caught (tests.test_verify_script.VerifySubm
 test_every_acceptance_point_passes_on_the_archived_examples (tests.test_verify_script.VerifySubmissionTest.test_every_acceptance_point_passes_on_the_archived_examples) ... ok
 
 ----------------------------------------------------------------------
-Ran 104 tests in 9.344s
+Ran 105 tests in 6.151s
 
 OK

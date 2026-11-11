@@ -68,7 +68,8 @@
       "draft": null,
       "failed_save_attempts": 2,
       "published": false,
-      "result_status": "save_failed"
+      "result_status": "save_failed",
+      "next_action": "保存接口失败；确认磁盘与权限后重跑（不会谎报成功）"
     }
   ],
   "unfinished_materials": [],

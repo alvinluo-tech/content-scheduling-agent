@@ -110,6 +110,8 @@ def _material_section(row: dict[str, Any], index: int) -> list[str]:
         lines.append("- 草稿：未保存（审核未通过，工具拒绝写入）")
     else:
         lines.append("- 草稿：无")
+    if row.get("next_action"):
+        lines.append("- 下一步：" + str(row["next_action"]))
     lines.append("- 已发布：" + _yes(row.get("published")) + "（工具集里没有发布能力）")
     lines.append("")
     return lines
