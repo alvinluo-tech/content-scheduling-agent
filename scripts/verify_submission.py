@@ -49,13 +49,15 @@ def material(report: dict[str, Any], material_id: str) -> dict[str, Any]:
 
 
 def collect() -> dict[str, Any]:
-    """同一份临时账本跑完全部用例，返回报告与最终账本。"""
+    """每个用例一份临时账本（05 故意复用 02 的账本验证去重），返回报告与 02/05 的最终账本。"""
     with tempfile.TemporaryDirectory() as tmp:
-        ledger = Path(tmp) / "verify.json"
         reports = {}
         for case in CASES:
+            shared = "02-conflict" if case == "05-dedup" else case
+            ledger = Path(tmp) / (shared + ".json")
             reports[case], _ = run_pipeline(load_case(case), data_dir=DATA_DIR, ledger=ledger, offline=True)
-        book = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
+        dedup_ledger = Path(tmp) / "02-conflict.json"
+        book = json.loads(dedup_ledger.read_text(encoding="utf-8")) if dedup_ledger.exists() else {}
     return {"reports": reports, "ledger": book}
 
 
@@ -191,6 +193,18 @@ def _contention(ctx):
     return ""
 
 
+def _next_action(ctx):
+    """每行素材都要能直接告诉人下一步做什么，而不是只留一个状态码。"""
+    for case, report in ctx["reports"].items():
+        for row in report["materials"]:
+            if not str(row.get("next_action") or "").strip():
+                return case + "/" + row["material_id"] + " 没有 next_action"
+    limited = ctx["reports"]["06-step-limit"]["materials"]
+    if not all("max-steps" in str(row.get("next_action")) for row in limited):
+        return "步数上限的素材没有写清怎么继续"
+    return ""
+
+
 CHECKS = [
     check("01", "任何情况下都不发布（published 恒为 false）", _published_false),
     check("02", "正常排期：01 落 draft_ready", _normal),
@@ -203,6 +217,7 @@ CHECKS = [
     check("09", "顺延：08 当天排满后跨日并待确认", _overflow),
     check("10", "频道隔离：09 只在 shorts 占位", _channel),
     check("11", "竞争：10 不对同一时段双订", _contention),
+    check("12", "每行素材都带下一步动作", _next_action),
 ]
 
 

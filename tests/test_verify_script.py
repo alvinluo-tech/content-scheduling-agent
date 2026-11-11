@@ -28,7 +28,7 @@ class VerifySubmissionTest(unittest.TestCase):
         results = self.mod.run_checks(self.ctx)
         failed = [row["name"] + " " + row["title"] + "：" + row["detail"] for row in results if not row["ok"]]
         self.assertEqual(failed, [])
-        self.assertEqual(len(results), 11)
+        self.assertEqual(len(results), 12)
 
     def test_a_claim_of_publishing_is_caught(self):
         ctx = copy.deepcopy(self.ctx)
